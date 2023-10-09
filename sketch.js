@@ -1,16 +1,27 @@
+let speedLabel;
+let speedSlider;
+let speedValueDisplay;
 let grid;
-const gridSize = 45;
-const cellSize = 12;
+const gridSize = 51;
+const cellSize = 10;
 
 function setup() {
   createCanvas(gridSize * cellSize, gridSize * cellSize);
+  speedLabel = createDiv('Simulation Speed: ');
+  speedLabel.position(10, gridSize * cellSize + 10);
+  speedSlider = createSlider(1, 60, 30);
+  speedSlider.position(10, speedLabel.y + speedLabel.height);
+  speedSlider.style('width', '480px');
+  speedValueDisplay = createSpan(speedSlider.value());
+  speedValueDisplay.position(speedSlider.x + speedSlider.width + 10, speedSlider.y);
   grid = new Grid(gridSize, gridSize);
-  // Initialize elements like walls, organisms, plants, etc.
   grid.initialize();
 }
 
 function draw() {
   background(220);
+  speedValueDisplay.html(speedSlider.value());
+  frameRate(speedSlider.value());
   grid.update();
   grid.display();
 }
