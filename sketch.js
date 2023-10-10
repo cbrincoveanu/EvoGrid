@@ -54,11 +54,15 @@ class Grid {
           this.cells[i][j] = new Wall(i, j);
         } */ else {
           // Randomly place inner cells
-          if (random(1) < 0.2) { // 20% chance to place a wall
+          let centerDist = Math.sqrt(Math.pow(i - this.rows / 2, 2) + Math.pow(j - this.cols / 2, 2));
+          let centerFactor = centerDist / Math.sqrt(Math.pow(this.rows / 2, 2) + Math.pow(this.cols / 2, 2));
+          let p = Math.abs(0.5 - centerFactor);
+          p = Math.pow(p, 1.5);
+          if (random(1) < p) {
             this.cells[i][j] = new Wall(i, j);
           } else if (random(1) < 0.0) { // 0% chance to place earth
             this.cells[i][j] = new Earth(i, j);
-          } else if (random(1) > 0.9) { // 10% chance to place an organism
+          } else if (random(1) > 0.8) { // 20% chance to place an organism
             this.cells[i][j] = new Organism(i, j);
           } else {
             this.cells[i][j] = null;
