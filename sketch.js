@@ -226,20 +226,28 @@ class Organism extends CellEntity {
     if (this.decisions[5] > 0.5) {
       if (grid.cells[targetX][targetY] === null) {
         grid.cells[targetX][targetY] = new Earth(targetX, targetY);
+        this.energy -= 10;
       }
-      this.energy -= 10;
     }
     if (this.decisions[6] > 0.5) {
       if (grid.cells[targetX][targetY] instanceof Earth) {
         grid.cells[targetX][targetY] = null;
+        this.energy -= 10;
       }
-      this.energy -= 10;
     }
     if (this.decisions[7] > 0.5) {
       if (grid.cells[targetX][targetY] === null) {
         grid.cells[targetX][targetY] = new Bullet(targetX, targetY, this.heading);
+        this.energy -= 20;
       }
-      this.energy -= 20;
+      if (grid.cells[targetX][targetY] instanceof Egg) {
+        grid.cells[targetX][targetY] = new DeadOrganism(targetX, targetY);
+        this.energy -= 20;
+      }
+      if (grid.cells[targetX][targetY] instanceof Organism) {
+        grid.cells[targetX][targetY].energy -= 500;
+        this.energy -= 20;
+      }
     }
     this.turn(this.decisions);
     let newX = this.x;
@@ -326,7 +334,7 @@ class Egg extends CellEntity {
   display() {
     fill(this.getColor());
     noStroke();
-    circle((this.x + 0.5) * cellSize, (this.y + 0.5) * cellSize, cellSize, cellSize);
+    circle((this.x + 0.5) * cellSize, (this.y + 0.5) * cellSize, cellSize);
   }
 }
 
