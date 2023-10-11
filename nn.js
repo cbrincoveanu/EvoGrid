@@ -122,150 +122,72 @@ class Matrix {
     }
 }
 
-class NeuralNetwork {
-  constructor(input_nodes, hidden_nodes, output_nodes) {
-    this.input_nodes = input_nodes;
-    this.hidden_nodes = hidden_nodes;
-    this.output_nodes = output_nodes;
-
-    // Weight matrices and bias vectors
-    this.weights_ih = new Matrix(this.hidden_nodes, this.input_nodes);
-    this.weights_ho = new Matrix(this.output_nodes, this.hidden_nodes);
-    this.bias_h = new Matrix(this.hidden_nodes, 1);
-    this.bias_o = new Matrix(this.output_nodes, 1);
-
-    // Initialize with random values
-    this.weights_ih.randomize();
-    this.weights_ho.randomize();
-    this.bias_h.randomize();
-    this.bias_o.randomize();
-  }
-
-  // The feed-forward algorithm
-  predict(input_array) {
-    let inputs = Matrix.fromArray(input_array);
-
-    // Calculate the hidden outputs
-    let hidden = Matrix.multiply(this.weights_ih, inputs);
-    hidden.add(this.bias_h);
-    hidden.map(sigmoid);
-
-    // Calculate the output
-    let output = Matrix.multiply(this.weights_ho, hidden);
-    output.add(this.bias_o);
-    output.map(sigmoid);
-
-    return output.toArray();
-  }
+class NN {
+    constructor(input_nodes, output_nodes, initial_outputs, recurrent_nodes, hidden_nodes) {
+      this.input_nodes = input_nodes;
+      this.output_nodes = output_nodes;
+      this.recurrent_nodes = recurrent_nodes;
+      this.hidden_nodes = hidden_nodes;
   
-  getMutation(rate) {
-    let clone = new NeuralNetwork(this.input_nodes, this.hidden_nodes, this.output_nodes);
-    clone.weights_ih = Matrix.copy(this.weights_ih);
-    clone.weights_ho = Matrix.copy(this.weights_ho);
-    clone.bias_h = Matrix.copy(this.bias_h);
-    clone.bias_o = Matrix.copy(this.bias_o);
-    function mutateVal(val) {
-      if (Math.random() < rate) {
-        return val * 0.99 + randomGaussian(0, 0.1);
-      } else {
-        return val;
+      // Weight matrices and bias vectors
+      this.weights = new Matrix(this.output_nodes + this.recurrent_nodes, this.input_nodes + this.output_nodes + this.recurrent_nodes);
+      this.bias = new Matrix(this.output_nodes + this.recurrent_nodes, 1);
+
+      this.weights_ih = new Matrix(this.hidden_nodes, this.input_nodes + this.output_nodes + this.recurrent_nodes);
+      this.weights_ho = new Matrix(this.output_nodes + this.recurrent_nodes, this.hidden_nodes);
+      this.bias_h = new Matrix(this.hidden_nodes, 1);
+
+      // Recurrent state
+      this.recurrentState = new Matrix(this.output_nodes + this.recurrent_nodes, 1);
+  
+      // Initialize
+      this.weights.randomize();
+      this.bias.randomize();
+      for (let i = initial_outputs; i < this.bias.rows; i++) {
+        this.bias.data[i][0] = -7;
       }
     }
-    clone.weights_ih.map(mutateVal);
-    clone.weights_ho.map(mutateVal);
-    clone.bias_h.map(mutateVal);
-    clone.bias_o.map(mutateVal);
-    return clone;
-  }
-}
-
-class RecurrentNeuralNetwork {
-  constructor(input_nodes, output_nodes, recurrent_nodes) {
-    this.input_nodes = input_nodes;
-    this.output_nodes = output_nodes;
-    this.recurrent_nodes = recurrent_nodes;
-
-    // Weight matrices and bias vectors
-    this.weights = new Matrix(this.output_nodes + this.recurrent_nodes, this.input_nodes + this.recurrent_nodes);
-    this.bias = new Matrix(this.output_nodes + this.recurrent_nodes, 1);
-
-    // Initialize with random values
-    this.weights.randomize();
-    this.bias.randomize();
-
-    this.recurrentState = new Matrix(this.recurrent_nodes, 1);
-  }
-
-  // The feed-forward algorithm
-  predict(input_array) {
-    let inputs = Matrix.fromArray(input_array);
-    let combinedInputs = Matrix.concat(inputs, this.recurrentState);
-    // Calculate the output
-    let output = Matrix.multiply(this.weights, combinedInputs);
-    output.add(this.bias);
-    output.map(sigmoid);
-    this.recurrentState = output.subMatrix(0, this.recurrent_nodes, 0, 1);
-    return output.subMatrix(this.recurrent_nodes, this.output_nodes + this.recurrent_nodes, 0, 1).toArray();
-  }
   
-  getMutation(rate) {
-    let clone = new RecurrentNeuralNetwork(this.input_nodes, this.output_nodes, this.recurrent_nodes);
-    clone.weights = Matrix.copy(this.weights);
-    clone.bias = Matrix.copy(this.bias);
-    function mutateVal(val) {
-      if (Math.random() < rate) {
-        return val * 0.99 + randomGaussian(0, 0.1);
-      } else {
-        return val;
-      }
+    // The feed-forward algorithm
+    predict(input_array) {
+        let inputs = Matrix.fromArray(input_array);
+        let combinedInputs = Matrix.concat(inputs, this.recurrentState);
+
+        // hidden output
+        let hidden = Matrix.multiply(this.weights_ih, combinedInputs);
+        hidden.add(this.bias_h);
+        hidden.map(sigmoid);
+        let output = Matrix.multiply(this.weights_ho, hidden);
+
+        // simple output
+        output.add(Matrix.multiply(this.weights, combinedInputs));
+        output.add(this.bias);
+        output.map(sigmoid);
+        this.recurrentState = output; //output.subMatrix(this.output_nodes, this.output_nodes + this.recurrent_nodes, 0, 1);
+        return output.subMatrix(0, this.output_nodes, 0, 1).toArray();
     }
-    clone.weights.map(mutateVal);
-    clone.bias.map(mutateVal);
-    return clone;
-  }
-}
-
-class SimpleNeuralNetwork {
-  constructor(input_nodes, output_nodes) {
-    this.input_nodes = input_nodes;
-    this.output_nodes = output_nodes;
-
-    // Weight matrices and bias vectors
-    this.weights = new Matrix(this.output_nodes, this.input_nodes);
-    this.bias = new Matrix(this.output_nodes, 1);
-
-    // Initialize with random values
-    this.weights.randomize();
-    this.bias.randomize();
-  }
-
-  // The feed-forward algorithm
-  predict(input_array) {
-    let inputs = Matrix.fromArray(input_array);
-
-    // Calculate the output
-    let output = Matrix.multiply(this.weights, inputs);
-    output.add(this.bias);
-    output.map(sigmoid);
-
-    return output.toArray();
-  }
-  
-  getMutation(rate) {
-    let clone = new SimpleNeuralNetwork(this.input_nodes, this.output_nodes);
-    clone.weights = Matrix.copy(this.weights);
-    clone.bias = Matrix.copy(this.bias);
-    function mutateVal(val) {
-      if (Math.random() < rate) {
-        return val + randomGaussian(0, 0.1);
-      } else {
-        return val;
+    
+    getMutation(rate) {
+      let clone = new NN(this.input_nodes, this.output_nodes, 0, this.recurrent_nodes, this.hidden_nodes);
+      clone.weights = Matrix.copy(this.weights);
+      clone.bias = Matrix.copy(this.bias);
+      clone.weights_ih = Matrix.copy(this.weights_ih);
+      clone.weights_ho = Matrix.copy(this.weights_ho);
+      clone.bias_h = Matrix.copy(this.bias_h);
+      function mutateVal(val) {
+        if (Math.random() < rate) {
+          return val + randomGaussian(0, 0.1);
+        } else {
+          return val;
+        }
       }
+      clone.weights.map(mutateVal);
+      clone.bias.map(mutateVal);
+      clone.weights_ih.map(mutateVal);
+      clone.weights_ho.map(mutateVal);
+      clone.bias_h.map(mutateVal);
+      return clone;
     }
-    clone.weights.map(mutateVal);
-    clone.bias.map(mutateVal);
-    return clone;
-  }
 }
 
 function sigmoid(x) {

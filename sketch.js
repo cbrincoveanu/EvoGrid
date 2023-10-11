@@ -6,8 +6,8 @@ let aliveCount;
 let maxEnergy;
 let aliveCountDisplay;
 let maxEnergyDisplay;
-const gridSize = 100;
-const cellSize = 5;
+const gridSize = 72;
+const cellSize = 8;
 
 function setup() {
   createCanvas(gridSize * cellSize, gridSize * cellSize);
@@ -66,7 +66,7 @@ class Grid {
     }
     for (let i = 1; i < this.rows - 1; i++) {
       for (let j = 1; j < this.cols - 1; j++) {
-        if (this.cells[i][j] === null && random(1) > 0.5) {
+        if (this.cells[i][j] === null && random(1) > 0.3) {
           this.cells[i][j] = new Plant(i, j);
         }
       }
@@ -75,11 +75,19 @@ class Grid {
 
   update() {
     // Randomly add plants
-    if (random() < 0.5) {
+    if (random() < 0.8) {
       const x = floor(random(this.rows));
       const y = floor(random(this.cols));
       if (this.cells[x][y] === null) {
         this.cells[x][y] = new Plant(x, y);
+      }
+    }
+    // Move bullets
+    for (let i = 0; i < this.rows; i++) {
+      for (let j = 0; j < this.cols; j++) {
+        if (this.cells[i][j] instanceof Bullet) {
+          this.cells[i][j].move(this);
+        }
       }
     }
     // Let each organism perceive the world and decide what to do.
@@ -151,7 +159,7 @@ class Organism extends CellEntity {
     this.size = 500;
     this.heading = createVector(1, 0);
     this.acted = false;
-    this.brain = new RecurrentNeuralNetwork(17, 7, 12); // NeuralNetwork(17, 7, 5); //SimpleNeuralNetwork(17, 5);
+    this.brain = new NN(17, 8, 5, 8, 9);
     this.decisions = [];
     this.r = 0;
     this.g = 0;
@@ -210,6 +218,26 @@ class Organism extends CellEntity {
   
   act(grid) {
     this.acted = true;
+    let targetX = this.x + this.heading.x;
+    let targetY = this.y + this.heading.y;
+    if (this.decisions[5] > 0.5) {
+      if (grid.cells[targetX][targetY] === null) {
+        grid.cells[targetX][targetY] = new Earth(targetX, targetY);
+      }
+      this.energy -= 50;
+    }
+    if (this.decisions[6] > 0.5) {
+      if (grid.cells[targetX][targetY] instanceof Earth) {
+        grid.cells[targetX][targetY] = null;
+      }
+      this.energy -= 50;
+    }
+    if (this.decisions[7] > 0.5) {
+      if (grid.cells[targetX][targetY] === null) {
+        grid.cells[targetX][targetY] = new Bullet(targetX, targetY, this.heading);
+      }
+      this.energy -= 50;
+    }
     this.turn(this.decisions);
     let newX = this.x;
     let newY = this.y;
@@ -235,8 +263,8 @@ class Organism extends CellEntity {
         this.x = newX;
         this.y = newY;
       } else if (grid.cells[newX][newY] instanceof DeadOrganism) {
-        this.energy += 100;
-        this.size += 100;
+        this.energy += 200;
+        this.size += 200;
         grid.cells[this.x][this.y] = null;
         grid.cells[newX][newY] = this;
         this.x = newX;
@@ -286,5 +314,31 @@ class Plant extends CellEntity {
 class DeadOrganism extends CellEntity {
   getColor() {
     return [100, 100, 100];
+  }
+}
+
+class Bullet extends CellEntity {
+  constructor(x, y, heading) {
+    super(x, y);
+    this.heading = heading;
+  }
+  move(grid) {
+    let newX = this.x + this.heading.x;
+    let newY = this.y + this.heading.y;
+    if (grid.cells[newX][newY] == null) {
+      grid.cells[newX][newY] = new Bullet(newX, newY, this.heading);
+    } else if (grid.cells[newX][newY] instanceof Organism) {
+      grid.cells[newX][newY].energy -= 500;
+    } else if (grid.cells[newX][newY] instanceof Plant) {
+      grid.cells[newX][newY] = null;
+    } else if (grid.cells[newX][newY] instanceof DeadOrganism) {
+      grid.cells[newX][newY] = null;
+    } else if (grid.cells[newX][newY] instanceof Bullet) {
+      grid.cells[newX][newY] = null;
+    }
+    grid.cells[this.x][this.y] = null;
+  }
+  getColor() {
+    return [255, 0, 0];
   }
 }
