@@ -9,7 +9,7 @@ let fittestSize;
 let aliveCountDisplay;
 let maxEnergyDisplay;
 let fittestDisplay;
-const gridSize = 72;
+const gridSize = 80;
 const cellSize = 8;
 
 function setup() {
@@ -81,7 +81,7 @@ class Grid {
 
   update() {
     // Randomly add plants
-    if (random() < 0.8) {
+    if (random() < 0.5) {
       const x = floor(random(this.rows));
       const y = floor(random(this.cols));
       if (this.cells[x][y] === null) {
@@ -269,7 +269,7 @@ class Organism extends CellEntity {
     if (this.decisions[4] > 0.5) {
       newX += this.heading.x;
       newY += this.heading.y;
-      this.energy--;
+      this.energy -= 1;
     }
     
     if (newX >= 0 && newX < grid.rows && newY >= 0 && newY < grid.cols) {
