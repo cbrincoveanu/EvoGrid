@@ -14,10 +14,11 @@ class SliderManager {
   constructor() {
     this.sliders = {};
     this.displays = {};
+    this.divisors = {};
     this.sliderContainer = select('#sliders');
   }
 
-  addSlider(name, minValue, maxValue, defaultValue) {
+  addSlider(name, minValue, maxValue, defaultValue, divisor) {
     let sliderDiv = createDiv().parent(this.sliderContainer);
     let label = createElement('label', name);
     label.parent(sliderDiv);
@@ -26,15 +27,16 @@ class SliderManager {
     slider.parent(sliderDiv);
     slider.style('width', '100%');
     this.sliders[name] = slider;
+    this.divisors[name] = divisor;
   }
 
   getValue(name) {
-    return this.sliders[name].value();
+    return this.sliders[name].value() / this.divisors[name];
   }
 
   updateDisplays() {
     for (const [key, value] of Object.entries(this.displays)) {
-      value.html(key + ": " + this.sliders[key].value());
+      value.html(key + ": " + this.sliders[key].value() / this.divisors[key]);
     }
   }
 }
@@ -75,7 +77,8 @@ function setup() {
   canvas = createCanvas(canvasContainerWidth, canvasContainerWidth);
   canvas.parent('canvas-container');
   sliderManager = new SliderManager();
-  sliderManager.addSlider("Simulation speed (FPS)", 1, 60, 60);
+  sliderManager.addSlider("Simulation speed (FPS)", 1, 60, 60, 1);
+  sliderManager.addSlider("Mutation rate", 1, 100, 10, 100);
   displayManager = new DisplayManager();
   displayManager.addDisplay("Alive count", 0);
   displayManager.addDisplay("Max energy", 0);
@@ -358,7 +361,8 @@ class Organism extends CellEntity {
         let newR = Math.min(Math.max((this.r + fittest.r) / 2 + randomGaussian(0, 20), 0), 255);
         let newG = Math.min(Math.max((this.g + fittest.g) / 2 + randomGaussian(0, 20), 0), 100);
         let newB = Math.min(Math.max((this.b + fittest.b) / 2 + randomGaussian(0, 20), 150), 255);
-        let egg = new Egg(oldX, oldY, this.heading, this.brain.getMutation(0.1, fittest.brain), newR, newG, newB, this.generation + 1);
+        let mutationRate = sliderManager.getValue("Mutation rate");
+        let egg = new Egg(oldX, oldY, this.heading, this.brain.getMutation(mutationRate, fittest.brain), newR, newG, newB, this.generation + 1);
         grid.cells[oldX][oldY] = egg;
       }
     }
