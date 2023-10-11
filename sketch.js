@@ -4,8 +4,11 @@ let speedValueDisplay;
 let grid;
 let aliveCount;
 let maxEnergy;
+let fittest;
+let fittestSize;
 let aliveCountDisplay;
 let maxEnergyDisplay;
+let fittestDisplay;
 const gridSize = 72;
 const cellSize = 8;
 
@@ -22,6 +25,8 @@ function setup() {
   aliveCountDisplay.position(10, speedSlider.y + speedSlider.height + 5);
   maxEnergyDisplay = createSpan("Max energy:");
   maxEnergyDisplay.position(10, aliveCountDisplay.y + aliveCountDisplay.height + 5);
+  fittestDisplay = createSpan("Fittest size:");
+  fittestDisplay.position(10, maxEnergyDisplay.y + maxEnergyDisplay.height + 5);
   grid = new Grid(gridSize, gridSize);
   grid.initialize();
 }
@@ -34,6 +39,7 @@ function draw() {
   grid.display();
   aliveCountDisplay.html("Alive count: " + aliveCount);
   maxEnergyDisplay.html("Max energy: " + maxEnergy);
+  fittestDisplay.html("Fittest size: " + fittestSize + " (gen " + fittest.generation + ")");
 }
 
 class Grid {
@@ -112,6 +118,7 @@ class Grid {
 
   display() {
     maxEnergy = -Infinity;
+    fittestSize = -Infinity;
     aliveCount = 0;
     for (let i = 0; i < this.rows; i++) {
       for (let j = 0; j < this.cols; j++) {
@@ -120,6 +127,10 @@ class Grid {
           if (this.cells[i][j] instanceof Organism) {
             aliveCount++;
             maxEnergy = max(maxEnergy, this.cells[i][j].energy);
+            if (this.cells[i][j].size > fittestSize) {
+              fittestSize = this.cells[i][j].size
+              fittest = this.cells[i][j]
+            }
           }
         }
       }
@@ -167,6 +178,7 @@ class Organism extends CellEntity {
     this.r = 0;
     this.g = 0;
     this.b = 255;
+    this.generation = 0;
   }
   
   turn(decisions) {
@@ -226,27 +238,27 @@ class Organism extends CellEntity {
     if (this.decisions[5] > 0.5) {
       if (grid.cells[targetX][targetY] === null) {
         grid.cells[targetX][targetY] = new Earth(targetX, targetY);
-        this.energy -= 10;
+        this.energy -= 1;
       }
     }
     if (this.decisions[6] > 0.5) {
       if (grid.cells[targetX][targetY] instanceof Earth) {
         grid.cells[targetX][targetY] = null;
-        this.energy -= 10;
+        this.energy -= 1;
       }
     }
     if (this.decisions[7] > 0.5) {
       if (grid.cells[targetX][targetY] === null) {
         grid.cells[targetX][targetY] = new Bullet(targetX, targetY, this.heading);
-        this.energy -= 20;
+        this.energy -= 10;
       }
       if (grid.cells[targetX][targetY] instanceof Egg) {
         grid.cells[targetX][targetY] = new DeadOrganism(targetX, targetY);
-        this.energy -= 20;
+        this.energy -= 10;
       }
       if (grid.cells[targetX][targetY] instanceof Organism) {
         grid.cells[targetX][targetY].energy -= 500;
-        this.energy -= 20;
+        this.energy -= 10;
       }
     }
     this.turn(this.decisions);
@@ -283,10 +295,10 @@ class Organism extends CellEntity {
       }
       if (this.energy > 2000) {
         this.energy = this.energy - 500;
-        let newR = Math.min(Math.max(this.r + randomGaussian(0, 20), 0), 255);
-        let newG = Math.min(Math.max(this.g + randomGaussian(0, 20), 0), 100);
-        let newB = Math.min(Math.max(this.b + randomGaussian(0, 20), 150), 255);
-        let egg = new Egg(oldX, oldY, this.heading, this.brain.getMutation(0.1), newR, newG, newB);
+        let newR = Math.min(Math.max((this.r + fittest.r) / 2 + randomGaussian(0, 20), 0), 255);
+        let newG = Math.min(Math.max((this.g + fittest.g) / 2 + randomGaussian(0, 20), 0), 100);
+        let newB = Math.min(Math.max((this.b + fittest.b) / 2 + randomGaussian(0, 20), 150), 255);
+        let egg = new Egg(oldX, oldY, this.heading, this.brain.getMutation(0.1, fittest.brain), newR, newG, newB, this.generation + 1);
         grid.cells[oldX][oldY] = egg;
       }
     }
@@ -304,13 +316,14 @@ class Organism extends CellEntity {
 }
 
 class Egg extends CellEntity {
-  constructor(x, y, heading, brain, r, g, b) {
+  constructor(x, y, heading, brain, r, g, b, generation) {
     super(x, y);
     this.heading = heading;
     this.brain = brain;
     this.r = r;
     this.g = g;
     this.b = b;
+    this.generation = generation;
     this.age = 0;
   }
 
@@ -323,6 +336,7 @@ class Egg extends CellEntity {
       organism.r = this.r;
       organism.g = this.g;
       organism.b = this.b;
+      organism.generation = this.generation;
       grid.cells[this.x][this.y] = organism;
     }
   }

@@ -167,13 +167,25 @@ class NN {
         return output.subMatrix(0, this.output_nodes, 0, 1).toArray();
     }
     
-    getMutation(rate) {
+    getMutation(rate, partner) {
       let clone = new NN(this.input_nodes, this.output_nodes, 0, this.recurrent_nodes, this.hidden_nodes);
       clone.weights = Matrix.copy(this.weights);
       clone.bias = Matrix.copy(this.bias);
       clone.weights_ih = Matrix.copy(this.weights_ih);
       clone.weights_ho = Matrix.copy(this.weights_ho);
       clone.bias_h = Matrix.copy(this.bias_h);
+      if (partner !== null) {
+        clone.weights.add(partner.weights);
+        clone.weights.map(half);
+        clone.bias.add(partner.bias);
+        clone.bias.map(half);
+        clone.weights_ih.add(partner.weights_ih);
+        clone.weights_ih.map(half);
+        clone.weights_ho.add(partner.weights_ho);
+        clone.weights_ho.map(half);
+        clone.bias_h.add(partner.bias_h);
+        clone.bias_h.map(half);
+      }
       function mutateVal(val) {
         if (Math.random() < rate) {
           return val + randomGaussian(0, 0.1);
@@ -191,5 +203,8 @@ class NN {
 }
 
 function sigmoid(x) {
-  return 1 / (1 + Math.exp(-x));
+    return 1 / (1 + Math.exp(-x));
+}
+function half(x) {
+    return x / 2;
 }
