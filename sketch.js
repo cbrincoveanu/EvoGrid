@@ -1,45 +1,102 @@
-let speedLabel;
-let speedSlider;
-let speedValueDisplay;
+let sliderManager;
+let displayManager;
 let grid;
 let aliveCount;
 let maxEnergy;
 let fittest;
 let fittestSize;
-let aliveCountDisplay;
-let maxEnergyDisplay;
-let fittestDisplay;
+let canvasContainerWidth;
+let canvas;
+let cellSize = 7;
 const gridSize = 80;
-const cellSize = 8;
+
+class SliderManager {
+  constructor() {
+    this.sliders = {};
+    this.displays = {};
+    this.sliderContainer = select('#sliders');
+  }
+
+  addSlider(name, minValue, maxValue, defaultValue) {
+    let sliderDiv = createDiv().parent(this.sliderContainer);
+    let label = createElement('label', name);
+    label.parent(sliderDiv);
+    this.displays[name] = label;
+    let slider = createSlider(minValue, maxValue, defaultValue);
+    slider.parent(sliderDiv);
+    slider.style('width', '100%');
+    this.sliders[name] = slider;
+  }
+
+  getValue(name) {
+    return this.sliders[name].value();
+  }
+
+  updateDisplays() {
+    for (const [key, value] of Object.entries(this.displays)) {
+      value.html(key + ": " + this.sliders[key].value());
+    }
+  }
+}
+
+class DisplayManager {
+  constructor() {
+    this.displays = {};
+    this.values = {};
+    this.container = select('#displays');
+  }
+
+  addDisplay(name, value) {
+    let div = createDiv().parent(this.container);
+    let display = createSpan(name + ": " + value);
+    display.parent(div);
+    this.displays[name] = display;
+    this.values[name] = value;
+  }
+
+  getValue(name) {
+    return this.values[name];
+  }
+
+  setValue(name, value) {
+    return this.values[name] = value;
+  }
+
+  updateDisplays() {
+    for (const [key, value] of Object.entries(this.displays)) {
+      value.html(key + ": " + this.values[key]);
+    }
+  }
+}
 
 function setup() {
-  createCanvas(gridSize * cellSize, gridSize * cellSize);
-  speedLabel = createDiv('Simulation Speed: ');
-  speedLabel.position(10, gridSize * cellSize + 10);
-  speedSlider = createSlider(1, 60, 60);
-  speedSlider.position(10, speedLabel.y + speedLabel.height);
-  speedSlider.style('width', '480px');
-  speedValueDisplay = createSpan(speedSlider.value());
-  speedValueDisplay.position(speedSlider.x + speedSlider.width + 10, speedSlider.y);
-  aliveCountDisplay = createSpan("Alive count:");
-  aliveCountDisplay.position(10, speedSlider.y + speedSlider.height + 5);
-  maxEnergyDisplay = createSpan("Max energy:");
-  maxEnergyDisplay.position(10, aliveCountDisplay.y + aliveCountDisplay.height + 5);
-  fittestDisplay = createSpan("Fittest size:");
-  fittestDisplay.position(10, maxEnergyDisplay.y + maxEnergyDisplay.height + 5);
+  canvasContainerWidth = select('#canvas-container').width;
+  cellSize = canvasContainerWidth / gridSize;
+  canvas = createCanvas(canvasContainerWidth, canvasContainerWidth);
+  canvas.parent('canvas-container');
+  sliderManager = new SliderManager();
+  sliderManager.addSlider("Simulation speed (FPS)", 1, 60, 60);
+  displayManager = new DisplayManager();
+  displayManager.addDisplay("Alive count", 0);
+  displayManager.addDisplay("Max energy", 0);
+  displayManager.addDisplay("Fittest size", 0);
   grid = new Grid(gridSize, gridSize);
   grid.initialize();
 }
 
 function draw() {
   background(220);
-  speedValueDisplay.html(speedSlider.value());
-  frameRate(speedSlider.value());
+  frameRate(sliderManager.getValue("Simulation speed (FPS)"));
+  sliderManager.updateDisplays();
+  displayManager.updateDisplays();
   grid.update();
   grid.display();
-  aliveCountDisplay.html("Alive count: " + aliveCount);
-  maxEnergyDisplay.html("Max energy: " + maxEnergy);
-  fittestDisplay.html("Fittest size: " + fittestSize + " (gen " + fittest.generation + ")");
+}
+
+function windowResized() {
+  canvasContainerWidth = select('#canvas-container').width;
+  resizeCanvas(canvasContainerWidth, canvasContainerWidth);
+  cellSize = canvasContainerWidth / gridSize;
 }
 
 class Grid {
@@ -138,6 +195,9 @@ class Grid {
     if (aliveCount == 0) {
       this.initialize();
     }
+    displayManager.setValue("Alive count", aliveCount);
+    displayManager.setValue("Max energy", maxEnergy);
+    displayManager.setValue("Fittest size", fittestSize + " (gen " + fittest.generation + ")");
   }
 }
 
