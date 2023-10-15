@@ -79,6 +79,7 @@ function setup() {
   sliderManager = new SliderManager();
   sliderManager.addSlider("Simulation speed (FPS)", 1, 60, 60, 1);
   sliderManager.addSlider("Mutation rate", 1, 100, 10, 100);
+  sliderManager.addSlider("Plant growth rate", 1, 100, 50, 100);
   displayManager = new DisplayManager();
   displayManager.addDisplay("Alive count", 0);
   displayManager.addDisplay("Max energy", 0);
@@ -141,7 +142,7 @@ class Grid {
 
   update() {
     // Randomly add plants
-    if (random() < 0.5) {
+    if (random() < sliderManager.getValue("Plant growth rate")) {
       const x = floor(random(this.rows));
       const y = floor(random(this.cols));
       if (this.cells[x][y] === null) {
