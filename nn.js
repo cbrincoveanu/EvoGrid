@@ -123,17 +123,17 @@ class Matrix {
 }
 
 class NN {
-    constructor(input_nodes, output_nodes, initial_outputs, recurrent_nodes, hidden_nodes) {
+    constructor(input_nodes, output_nodes, recurrent_nodes, hidden_nodes) {
       this.input_nodes = input_nodes;
       this.output_nodes = output_nodes;
       this.recurrent_nodes = recurrent_nodes;
       this.hidden_nodes = hidden_nodes;
   
       // Weight matrices and bias vectors
-      this.weights = new Matrix(this.output_nodes + this.recurrent_nodes, this.input_nodes + this.output_nodes + this.recurrent_nodes);
+      this.weights = new Matrix(this.output_nodes + this.recurrent_nodes, this.input_nodes + this.recurrent_nodes);
       this.bias = new Matrix(this.output_nodes + this.recurrent_nodes, 1);
 
-      this.weights_ih = new Matrix(this.hidden_nodes, this.input_nodes + this.output_nodes + this.recurrent_nodes);
+      this.weights_ih = new Matrix(this.hidden_nodes, this.input_nodes + this.recurrent_nodes);
       this.weights_ho = new Matrix(this.output_nodes + this.recurrent_nodes, this.hidden_nodes);
       this.bias_h = new Matrix(this.hidden_nodes, 1);
 
@@ -143,27 +143,23 @@ class NN {
       // Initialize
       this.weights.randomize();
       this.bias.randomize();
-      for (let i = initial_outputs; i < this.bias.rows; i++) {
-        this.bias.data[i][0] = -7;
-      }
     }
   
     // The feed-forward algorithm
     predict(input_array) {
         let inputs = Matrix.fromArray(input_array);
-        let combinedInputs = Matrix.concat(inputs, this.recurrentState);
 
         // hidden output
-        let hidden = Matrix.multiply(this.weights_ih, combinedInputs);
+        let hidden = Matrix.multiply(this.weights_ih, inputs);
         hidden.add(this.bias_h);
         hidden.map(sigmoid);
         let output = Matrix.multiply(this.weights_ho, hidden);
 
         // simple output
-        output.add(Matrix.multiply(this.weights, combinedInputs));
+        output.add(Matrix.multiply(this.weights, inputs));
         output.add(this.bias);
         output.map(sigmoid);
-        this.recurrentState = output; //output.subMatrix(this.output_nodes, this.output_nodes + this.recurrent_nodes, 0, 1);
+        this.recurrentState = output.subMatrix(this.output_nodes, this.output_nodes + this.recurrent_nodes, 0, 1);
         return output.subMatrix(0, this.output_nodes, 0, 1).toArray();
     }
     
@@ -188,7 +184,7 @@ class NN {
       }
       function mutateVal(val) {
         if (Math.random() < rate) {
-          return val + randomGaussian(0, 0.1);
+          return val + randomGaussian(0, 1);
         } else {
           return val;
         }

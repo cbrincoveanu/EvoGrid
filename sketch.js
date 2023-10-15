@@ -82,8 +82,8 @@ function setup() {
   canvas.parent('canvas-container');
   sliderManager = new SliderManager();
   sliderManager.addSlider("Simulation speed (FPS)", 1, 60, 60, 1);
-  sliderManager.addSlider("Mutation rate", 1, 100, 10, 100);
-  sliderManager.addSlider("Plant growth rate", 1, 100, 80, 100);
+  sliderManager.addSlider("Mutation rate", 1, 100, 5, 100);
+  sliderManager.addSlider("Plant growth rate", 1, 100, 100, 100);
   displayManager = new DisplayManager();
   displayManager.addDisplay("Total steps", 0);
   displayManager.addDisplay("Alive count", 0);
@@ -128,7 +128,7 @@ class Grid {
           let centerDist = Math.sqrt(Math.pow(i - this.rows / 2, 2) + Math.pow(j - this.cols / 2, 2));
           let centerFactor = centerDist / Math.sqrt(Math.pow(this.rows / 2, 2) + Math.pow(this.cols / 2, 2));
           let p = Math.abs(0.5 - centerFactor);
-          p = Math.pow(p, 1.5);
+          p = Math.pow(p, 3);
           if (random(1) < p) {
             this.cells[i][j] = new Wall(i, j);
           } else if (random(1) > 0.95) {
@@ -268,7 +268,7 @@ class Organism extends CellEntity {
     this.size = 500;
     this.heading = createVector(1, 0);
     this.acted = false;
-    this.brain = new NN(13, 8, 5, 0, 0);
+    this.brain = new NN(13, 8, 0, 0);
     this.decisions = [];
     this.r = 0;
     this.g = 0;
@@ -335,25 +335,23 @@ class Organism extends CellEntity {
         grid.cells[targetX][targetY] = new Earth(targetX, targetY);
         this.energy -= 1;
       }
-    }
-    if (this.decisions[6] > 0.5) {
+    } else if (this.decisions[6] > 0.5) {
       if (grid.cells[targetX][targetY] instanceof Earth) {
         grid.cells[targetX][targetY] = null;
         this.energy -= 1;
       }
-    }
-    if (this.decisions[7] > 0.5) {
+    } else if (this.decisions[7] > 0.5) {
       if (grid.cells[targetX][targetY] === null) {
         grid.cells[targetX][targetY] = new Bullet(targetX, targetY, this.heading);
-        this.energy -= 10;
+        this.energy -= 50;
       }
       if (grid.cells[targetX][targetY] instanceof Egg) {
         grid.cells[targetX][targetY] = new DeadOrganism(targetX, targetY);
-        this.energy -= 10;
+        this.energy -= 50;
       }
-      if (grid.cells[targetX][targetY] instanceof Organism) {
+      if (grid.cells[targetX][targetY] instanceof Organism || grid.cells[targetX][targetY] instanceof Predator) {
         grid.cells[targetX][targetY].energy -= 500;
-        this.energy -= 10;
+        this.energy -= 50;
       }
     }
     this.turn(this.decisions);
@@ -388,13 +386,14 @@ class Organism extends CellEntity {
         this.x = newX;
         this.y = newY;
       }
-      if (this.energy > 1500) {
+      if (this.energy > 1000) {
         this.energy = this.energy - 500;
         let newR = Math.min(Math.max((this.r + fittest.r) / 2 + randomGaussian(0, 20), 0), 150);
         let newG = Math.min(Math.max((this.g + fittest.g) / 2 + randomGaussian(0, 20), 0), 100);
         let newB = Math.min(Math.max((this.b + fittest.b) / 2 + randomGaussian(0, 20), 150), 255);
         let mutationRate = sliderManager.getValue("Mutation rate");
-        let egg = new Egg(oldX, oldY, this.heading, this.brain.getMutation(mutationRate, fittest.brain), newR, newG, newB, this.generation + 1);
+        let newGeneration = Math.max(this.generation, fittest.generation) + 1;
+        let egg = new Egg(oldX, oldY, this.heading, this.brain.getMutation(mutationRate, fittest.brain), newR, newG, newB, newGeneration);
         grid.cells[oldX][oldY] = egg;
       }
     }
@@ -425,7 +424,7 @@ class Egg extends CellEntity {
 
   grow(grid) {
     this.age++;
-    if (this.age > 500) {
+    if (this.age > 250) {
       let organism = new Organism(this.x, this.y);
       organism.heading = this.heading;
       organism.brain = this.brain;
@@ -455,7 +454,7 @@ class Predator extends CellEntity {
     this.size = 1000;
     this.heading = createVector(1, 0);
     this.acted = false;
-    this.brain = new NN(17, 5, 5, 0, 0);
+    this.brain = new NN(17, 5, 0, 0);
     this.decisions = [];
     this.r = 255;
     this.g = 0;
@@ -562,13 +561,14 @@ class Predator extends CellEntity {
         this.x = newX;
         this.y = newY;
       }
-      if (this.energy > 3000) {
+      if (this.energy > 2000) {
         this.energy = this.energy - 1000;
         let newR = Math.min(Math.max((this.r + fittestPredator.r) / 2 + randomGaussian(0, 20), 150), 255);
         let newG = Math.min(Math.max((this.g + fittestPredator.g) / 2 + randomGaussian(0, 20), 0), 100);
         let newB = Math.min(Math.max((this.b + fittestPredator.b) / 2 + randomGaussian(0, 20), 0), 150);
         let mutationRate = sliderManager.getValue("Mutation rate");
-        let egg = new PredatorEgg(oldX, oldY, this.heading, this.brain.getMutation(mutationRate, fittestPredator.brain), newR, newG, newB, this.generation + 1);
+        let newGeneration = Math.max(this.generation, fittestPredator.generation) + 1;
+        let egg = new PredatorEgg(oldX, oldY, this.heading, this.brain.getMutation(mutationRate, fittestPredator.brain), newR, newG, newB, newGeneration);
         grid.cells[oldX][oldY] = egg;
       }
     }
