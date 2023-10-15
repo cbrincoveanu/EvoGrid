@@ -138,7 +138,7 @@ class NN {
       this.bias_h = new Matrix(this.hidden_nodes, 1);
 
       // Recurrent state
-      this.recurrentState = new Matrix(this.output_nodes + this.recurrent_nodes, 1);
+      this.recurrentState = new Matrix(this.recurrent_nodes, 1);
   
       // Initialize
       this.weights.randomize();
@@ -148,15 +148,16 @@ class NN {
     // The feed-forward algorithm
     predict(input_array) {
         let inputs = Matrix.fromArray(input_array);
+        let combinedInputs = Matrix.concat(inputs, this.recurrentState);
 
         // hidden output
-        let hidden = Matrix.multiply(this.weights_ih, inputs);
+        let hidden = Matrix.multiply(this.weights_ih, combinedInputs);
         hidden.add(this.bias_h);
         hidden.map(sigmoid);
         let output = Matrix.multiply(this.weights_ho, hidden);
 
         // simple output
-        output.add(Matrix.multiply(this.weights, inputs));
+        output.add(Matrix.multiply(this.weights, combinedInputs));
         output.add(this.bias);
         output.map(sigmoid);
         this.recurrentState = output.subMatrix(this.output_nodes, this.output_nodes + this.recurrent_nodes, 0, 1);
@@ -164,7 +165,7 @@ class NN {
     }
     
     getMutation(rate, partner) {
-      let clone = new NN(this.input_nodes, this.output_nodes, 0, this.recurrent_nodes, this.hidden_nodes);
+      let clone = new NN(this.input_nodes, this.output_nodes, this.recurrent_nodes, this.hidden_nodes);
       clone.weights = Matrix.copy(this.weights);
       clone.bias = Matrix.copy(this.bias);
       clone.weights_ih = Matrix.copy(this.weights_ih);

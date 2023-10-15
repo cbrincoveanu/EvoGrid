@@ -128,7 +128,7 @@ class Grid {
           let centerDist = Math.sqrt(Math.pow(i - this.rows / 2, 2) + Math.pow(j - this.cols / 2, 2));
           let centerFactor = centerDist / Math.sqrt(Math.pow(this.rows / 2, 2) + Math.pow(this.cols / 2, 2));
           let p = Math.abs(0.5 - centerFactor);
-          p = Math.pow(p, 3);
+          p = Math.pow(p, 2);
           if (random(1) < p) {
             this.cells[i][j] = new Wall(i, j);
           } else if (random(1) > 0.95) {
@@ -268,7 +268,7 @@ class Organism extends CellEntity {
     this.size = 500;
     this.heading = createVector(1, 0);
     this.acted = false;
-    this.brain = new NN(13, 8, 0, 0);
+    this.brain = new NN(13, 8, 3, 3);
     this.decisions = [];
     this.r = 0;
     this.g = 0;
@@ -454,7 +454,7 @@ class Predator extends CellEntity {
     this.size = 1000;
     this.heading = createVector(1, 0);
     this.acted = false;
-    this.brain = new NN(17, 5, 0, 0);
+    this.brain = new NN(17, 5, 3, 3);
     this.decisions = [];
     this.r = 255;
     this.g = 0;
