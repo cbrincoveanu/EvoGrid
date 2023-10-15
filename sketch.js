@@ -126,7 +126,7 @@ class Grid {
           p = Math.pow(p, 1.5);
           if (random(1) < p) {
             this.cells[i][j] = new Wall(i, j);
-          } else if (random(1) > 0.8) {
+          } else if (random(1) > 0.9) {
             this.cells[i][j] = new Organism(i, j);
           } else {
             this.cells[i][j] = null;
@@ -242,7 +242,7 @@ class Organism extends CellEntity {
     this.size = 500;
     this.heading = createVector(1, 0);
     this.acted = false;
-    this.brain = new NN(17, 8, 5, 8, 9);
+    this.brain = new NN(17, 8, 5, 0, 0);
     this.decisions = [];
     this.r = 0;
     this.g = 0;
@@ -362,7 +362,7 @@ class Organism extends CellEntity {
         this.x = newX;
         this.y = newY;
       }
-      if (this.energy > 2000) {
+      if (this.energy > 1500) {
         this.energy = this.energy - 500;
         let newR = Math.min(Math.max((this.r + fittest.r) / 2 + randomGaussian(0, 20), 0), 255);
         let newG = Math.min(Math.max((this.g + fittest.g) / 2 + randomGaussian(0, 20), 0), 100);
