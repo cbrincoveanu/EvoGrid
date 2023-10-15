@@ -1,6 +1,7 @@
 let sliderManager;
 let displayManager;
 let grid;
+let totalStepCount;
 let aliveCount;
 let maxEnergy;
 let fittest;
@@ -81,6 +82,7 @@ function setup() {
   sliderManager.addSlider("Mutation rate", 1, 100, 10, 100);
   sliderManager.addSlider("Plant growth rate", 1, 100, 50, 100);
   displayManager = new DisplayManager();
+  displayManager.addDisplay("Total steps", 0);
   displayManager.addDisplay("Alive count", 0);
   displayManager.addDisplay("Max energy", 0);
   displayManager.addDisplay("Fittest size", 0);
@@ -111,6 +113,7 @@ class Grid {
   }
 
   initialize() {
+    totalStepCount = 0;
     for (let i = 0; i < this.rows; i++) {
       this.cells[i] = [];
       for (let j = 0; j < this.cols; j++) {
@@ -141,6 +144,7 @@ class Grid {
   }
 
   update() {
+    totalStepCount++;
     // Randomly add plants
     if (random() < sliderManager.getValue("Plant growth rate")) {
       const x = floor(random(this.rows));
@@ -199,6 +203,7 @@ class Grid {
     if (aliveCount == 0) {
       this.initialize();
     }
+    displayManager.setValue("Total steps", totalStepCount);
     displayManager.setValue("Alive count", aliveCount);
     displayManager.setValue("Max energy", maxEnergy);
     displayManager.setValue("Fittest size", fittestSize + " (gen " + fittest.generation + ")");
