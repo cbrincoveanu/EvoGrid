@@ -268,7 +268,7 @@ class Organism extends CellEntity {
     this.size = 500;
     this.heading = createVector(1, 0);
     this.acted = false;
-    this.brain = new NN(17, 8, 5, 0, 0);
+    this.brain = new NN(13, 8, 5, 0, 0);
     this.decisions = [];
     this.r = 0;
     this.g = 0;
@@ -286,27 +286,27 @@ class Organism extends CellEntity {
     this.heading = turnVector(this.heading, maxIndex);
   }
   
-  getColorAndDistance(grid, direction) {
+  getDirectionColor(grid, direction) {
     let dx = direction.x;
     let dy = direction.y;
     let posX = this.x;
     let posY = this.y;
-    let distance = 1;
-    while (true) {
-      posX += dx;
-      posY += dy;
-      let cell = grid.cells[posY][posX];
-      if (cell !== null) {
-        let r, g, b, d;
-        [r, g, b] = cell.getColor();
-        r = r / 255;
-        g = g / 255;
-        b = b / 255;
-        d = 1 / distance;
-        return {r, g, b, d};
-      }
-      distance++;
+    posX += dx;
+    posY += dy;
+    let cell = grid.cells[posY][posX];
+    if (cell !== null) {
+      let r, g, b, d;
+      [r, g, b] = cell.getColor();
+      r = r / 255;
+      g = g / 255;
+      b = b / 255;
+      return {r, g, b};
     }
+    let r, g, b;
+    r = 1;
+    g = 1;
+    b = 1;
+    return {r, g, b};
   }
 
   perceive(grid) {
@@ -319,8 +319,8 @@ class Organism extends CellEntity {
       turnVector(this.heading, 3)
     ];
     for (let dir of directions) {
-      let info = this.getColorAndDistance(grid, dir);
-      vision.push(info.r, info.g, info.b, info.d);
+      let info = this.getDirectionColor(grid, dir);
+      vision.push(info.r, info.g, info.b);
     }
     vision.push(Math.random());
     this.decisions = this.brain.predict(vision);
@@ -455,7 +455,7 @@ class Predator extends CellEntity {
     this.size = 1000;
     this.heading = createVector(1, 0);
     this.acted = false;
-    this.brain = new NN(17, 5, 5, 2, 2);
+    this.brain = new NN(17, 5, 5, 0, 0);
     this.decisions = [];
     this.r = 255;
     this.g = 0;
