@@ -268,7 +268,7 @@ class Organism extends CellEntity {
     this.size = 500;
     this.heading = createVector(1, 0);
     this.acted = false;
-    this.brain = new NN(13, 8, 3, 3);
+    this.brain = new NN(13, 8, 0, 0);
     this.decisions = [];
     this.r = 0;
     this.g = 0;
@@ -386,7 +386,7 @@ class Organism extends CellEntity {
         this.x = newX;
         this.y = newY;
       }
-      if (this.energy > 1000) {
+      if (this.energy > 2000) {
         this.energy = this.energy - 500;
         let newR = Math.min(Math.max((this.r + fittest.r) / 2 + randomGaussian(0, 20), 0), 150);
         let newG = Math.min(Math.max((this.g + fittest.g) / 2 + randomGaussian(0, 20), 0), 100);
@@ -454,7 +454,7 @@ class Predator extends CellEntity {
     this.size = 1000;
     this.heading = createVector(1, 0);
     this.acted = false;
-    this.brain = new NN(17, 5, 3, 3);
+    this.brain = new NN(17, 5, 0, 0);
     this.decisions = [];
     this.r = 255;
     this.g = 0;
@@ -561,7 +561,7 @@ class Predator extends CellEntity {
         this.x = newX;
         this.y = newY;
       }
-      if (this.energy > 2000) {
+      if (this.energy > 3000) {
         this.energy = this.energy - 1000;
         let newR = Math.min(Math.max((this.r + fittestPredator.r) / 2 + randomGaussian(0, 20), 150), 255);
         let newG = Math.min(Math.max((this.g + fittestPredator.g) / 2 + randomGaussian(0, 20), 0), 100);
