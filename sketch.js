@@ -3,13 +3,16 @@ let displayManager;
 let grid;
 let totalStepCount;
 let aliveCount;
+let predatorCount;
 let maxEnergy;
 let fittest;
 let fittestSize;
+let fittestPredator;
+let fittestPredatorSize;
 let canvasContainerWidth;
 let canvas;
 let cellSize = 7;
-const gridSize = 80;
+const gridSize = 100;
 
 class SliderManager {
   constructor() {
@@ -80,12 +83,14 @@ function setup() {
   sliderManager = new SliderManager();
   sliderManager.addSlider("Simulation speed (FPS)", 1, 60, 60, 1);
   sliderManager.addSlider("Mutation rate", 1, 100, 10, 100);
-  sliderManager.addSlider("Plant growth rate", 1, 100, 50, 100);
+  sliderManager.addSlider("Plant growth rate", 1, 100, 80, 100);
   displayManager = new DisplayManager();
   displayManager.addDisplay("Total steps", 0);
   displayManager.addDisplay("Alive count", 0);
   displayManager.addDisplay("Max energy", 0);
   displayManager.addDisplay("Fittest size", 0);
+  displayManager.addDisplay("Predator count", 0);
+  displayManager.addDisplay("Fittest predator size", 0);
   grid = new Grid(gridSize, gridSize);
   grid.initialize();
 }
@@ -126,8 +131,10 @@ class Grid {
           p = Math.pow(p, 1.5);
           if (random(1) < p) {
             this.cells[i][j] = new Wall(i, j);
-          } else if (random(1) > 0.9) {
+          } else if (random(1) > 0.95) {
             this.cells[i][j] = new Organism(i, j);
+          } else if (random(1) > 0.99) {
+            this.cells[i][j] = new Predator(i, j);
           } else {
             this.cells[i][j] = null;
           }
@@ -136,7 +143,7 @@ class Grid {
     }
     for (let i = 1; i < this.rows - 1; i++) {
       for (let j = 1; j < this.cols - 1; j++) {
-        if (this.cells[i][j] === null && random(1) > 0.3) {
+        if (this.cells[i][j] === null && random(1) > 0.7) {
           this.cells[i][j] = new Plant(i, j);
         }
       }
@@ -162,6 +169,9 @@ class Grid {
         if (this.cells[i][j] instanceof Egg) {
           this.cells[i][j].grow(this);
         }
+        if (this.cells[i][j] instanceof PredatorEgg) {
+          this.cells[i][j].grow(this);
+        }
       }
     }
     // Let each organism perceive the world and decide what to do.
@@ -169,12 +179,16 @@ class Grid {
       for (let j = 0; j < this.cols; j++) {
         if (this.cells[i][j] instanceof Organism) {
           this.cells[i][j].perceive(this);
+        } else if (this.cells[i][j] instanceof Predator) {
+          this.cells[i][j].perceive(this);
         }
       }
     }
     for (let i = 0; i < this.rows; i++) {
       for (let j = 0; j < this.cols; j++) {
         if (this.cells[i][j] instanceof Organism && !this.cells[i][j].acted) {
+          this.cells[i][j].act(this);
+        } else if (this.cells[i][j] instanceof Predator && !this.cells[i][j].acted) {
           this.cells[i][j].act(this);
         }
       }
@@ -184,7 +198,9 @@ class Grid {
   display() {
     maxEnergy = -Infinity;
     fittestSize = -Infinity;
+    fittestPredatorSize = -Infinity;
     aliveCount = 0;
+    predatorCount = 0;
     for (let i = 0; i < this.rows; i++) {
       for (let j = 0; j < this.cols; j++) {
         if (this.cells[i][j]) {
@@ -197,16 +213,26 @@ class Grid {
               fittest = this.cells[i][j]
             }
           }
+          if (this.cells[i][j] instanceof Predator) {
+            predatorCount++;
+            maxEnergy = max(maxEnergy, this.cells[i][j].energy);
+            if (this.cells[i][j].size > fittestPredatorSize) {
+              fittestPredatorSize = this.cells[i][j].size
+              fittestPredator = this.cells[i][j]
+            }
+          }
         }
       }
     }
-    if (aliveCount == 0) {
+    if (aliveCount == 0 || predatorCount == 0) {
       this.initialize();
     }
     displayManager.setValue("Total steps", totalStepCount);
     displayManager.setValue("Alive count", aliveCount);
     displayManager.setValue("Max energy", maxEnergy);
-    displayManager.setValue("Fittest size", fittestSize + " (gen " + fittest.generation + ")");
+    displayManager.setValue("Fittest size", fittestSize + " (generation: " + fittest.generation + ", NN params: "+ fittest.brain.getParams() +")");
+    displayManager.setValue("Predator count", predatorCount);
+    displayManager.setValue("Fittest predator size", fittestPredatorSize + " (generation: " + fittestPredator.generation + ", NN params: "+ fittestPredator.brain.getParams() +")");
   }
 }
 
@@ -364,7 +390,7 @@ class Organism extends CellEntity {
       }
       if (this.energy > 1500) {
         this.energy = this.energy - 500;
-        let newR = Math.min(Math.max((this.r + fittest.r) / 2 + randomGaussian(0, 20), 0), 255);
+        let newR = Math.min(Math.max((this.r + fittest.r) / 2 + randomGaussian(0, 20), 0), 150);
         let newG = Math.min(Math.max((this.g + fittest.g) / 2 + randomGaussian(0, 20), 0), 100);
         let newB = Math.min(Math.max((this.b + fittest.b) / 2 + randomGaussian(0, 20), 150), 255);
         let mutationRate = sliderManager.getValue("Mutation rate");
@@ -422,6 +448,180 @@ class Egg extends CellEntity {
   }
 }
 
+class Predator extends CellEntity {
+  constructor(x, y) {
+    super(x, y);
+    this.energy = 1000;
+    this.size = 1000;
+    this.heading = createVector(1, 0);
+    this.acted = false;
+    this.brain = new NN(17, 5, 5, 2, 2);
+    this.decisions = [];
+    this.r = 255;
+    this.g = 0;
+    this.b = 0;
+    this.generation = 0;
+  }
+  
+  turn(decisions) {
+    let maxIndex = 0;
+    for (let i = 1; i < 4; i++) {
+      if (decisions[i] > decisions[maxIndex]) {
+        maxIndex = i;
+      }
+    }
+    this.heading = turnVector(this.heading, maxIndex);
+  }
+  
+  getColorAndDistance(grid, direction) {
+    let dx = direction.x;
+    let dy = direction.y;
+    let posX = this.x;
+    let posY = this.y;
+    let distance = 1;
+    while (true) {
+      posX += dx;
+      posY += dy;
+      let cell = grid.cells[posY][posX];
+      if (cell !== null) {
+        let r, g, b, d;
+        [r, g, b] = cell.getColor();
+        r = r / 255;
+        g = g / 255;
+        b = b / 255;
+        d = 1 / distance;
+        return {r, g, b, d};
+      }
+      distance++;
+    }
+  }
+
+  perceive(grid) {
+    this.acted = false;
+    let vision = [];
+    const directions = [
+      this.heading,
+      turnVector(this.heading, 1),
+      turnVector(this.heading, 2),
+      turnVector(this.heading, 3)
+    ];
+    for (let dir of directions) {
+      let info = this.getColorAndDistance(grid, dir);
+      vision.push(info.r, info.g, info.b, info.d);
+    }
+    vision.push(Math.random());
+    this.decisions = this.brain.predict(vision);
+  }
+  
+  act(grid) {
+    this.acted = true;
+    let targetX = this.x + this.heading.x;
+    let targetY = this.y + this.heading.y;
+    this.turn(this.decisions);
+    let newX = this.x;
+    let newY = this.y;
+    let oldX = this.x;
+    let oldY = this.y;
+    if (this.decisions[4] > 0.5) {
+      newX += this.heading.x;
+      newY += this.heading.y;
+      this.energy -= 1;
+    }
+    
+    if (newX >= 0 && newX < grid.rows && newY >= 0 && newY < grid.cols) {
+      if (grid.cells[newX][newY] === null) {
+        grid.cells[this.x][this.y] = null;
+        grid.cells[newX][newY] = this;
+        this.x = newX;
+        this.y = newY;
+      } else if (grid.cells[newX][newY] instanceof Organism) {
+        this.energy += 500;
+        this.size += 500;
+        grid.cells[this.x][this.y] = null;
+        grid.cells[newX][newY] = this;
+        this.x = newX;
+        this.y = newY;
+      } else if (grid.cells[newX][newY] instanceof Egg) {
+        this.energy += 300;
+        this.size += 300;
+        grid.cells[this.x][this.y] = null;
+        grid.cells[newX][newY] = this;
+        this.x = newX;
+        this.y = newY;
+      } else if (grid.cells[newX][newY] instanceof DeadOrganism) {
+        this.energy += 100;
+        this.size += 100;
+        grid.cells[this.x][this.y] = null;
+        grid.cells[newX][newY] = this;
+        this.x = newX;
+        this.y = newY;
+      } else if (grid.cells[newX][newY] instanceof Plant) {
+        this.energy -= 10;
+        grid.cells[this.x][this.y] = null;
+        grid.cells[newX][newY] = this;
+        this.x = newX;
+        this.y = newY;
+      }
+      if (this.energy > 3000) {
+        this.energy = this.energy - 1000;
+        let newR = Math.min(Math.max((this.r + fittestPredator.r) / 2 + randomGaussian(0, 20), 150), 255);
+        let newG = Math.min(Math.max((this.g + fittestPredator.g) / 2 + randomGaussian(0, 20), 0), 100);
+        let newB = Math.min(Math.max((this.b + fittestPredator.b) / 2 + randomGaussian(0, 20), 0), 150);
+        let mutationRate = sliderManager.getValue("Mutation rate");
+        let egg = new PredatorEgg(oldX, oldY, this.heading, this.brain.getMutation(mutationRate, fittestPredator.brain), newR, newG, newB, this.generation + 1);
+        grid.cells[oldX][oldY] = egg;
+      }
+    }
+
+    this.energy--;
+
+    if (this.energy < 0) {
+      grid.cells[this.x][this.y] = new DeadOrganism(this.x, this.y);
+    }
+  }
+  
+  getColor() {
+    return [this.r, this.g, this.b];
+  }
+}
+
+class PredatorEgg extends CellEntity {
+  constructor(x, y, heading, brain, r, g, b, generation) {
+    super(x, y);
+    this.heading = heading;
+    this.brain = brain;
+    this.r = r;
+    this.g = g;
+    this.b = b;
+    this.generation = generation;
+    this.age = 0;
+  }
+
+  grow(grid) {
+    this.age++;
+    if (this.age > 500) {
+      let organism = new Predator(this.x, this.y);
+      organism.heading = this.heading;
+      organism.brain = this.brain;
+      organism.r = this.r;
+      organism.g = this.g;
+      organism.b = this.b;
+      organism.generation = this.generation;
+      grid.cells[this.x][this.y] = organism;
+    }
+  }
+
+  getColor() {
+    return [Math.floor(0.5 * this.r + 127.5), Math.floor(0.5 * this.g + 127.5), Math.floor(0.5 * this.b + 127.5)];
+  }
+
+  display() {
+    fill(this.getColor());
+    noStroke();
+    circle((this.x + 0.5) * cellSize, (this.y + 0.5) * cellSize, cellSize);
+  }
+}
+
 class Wall extends CellEntity {
   getColor() {
     return [0, 0, 0];
@@ -458,7 +658,11 @@ class Bullet extends CellEntity {
       grid.cells[newX][newY] = new Bullet(newX, newY, this.heading);
     } else if (grid.cells[newX][newY] instanceof Organism) {
       grid.cells[newX][newY].energy -= 500;
+    } else if (grid.cells[newX][newY] instanceof Predator) {
+      grid.cells[newX][newY].energy -= 500;
     } else if (grid.cells[newX][newY] instanceof Egg) {
+      grid.cells[newX][newY] = new DeadOrganism(newX, newY);
+    } else if (grid.cells[newX][newY] instanceof PredatorEgg) {
       grid.cells[newX][newY] = new DeadOrganism(newX, newY);
     } else if (grid.cells[newX][newY] instanceof Plant) {
       grid.cells[newX][newY] = null;
@@ -470,6 +674,6 @@ class Bullet extends CellEntity {
     grid.cells[this.x][this.y] = null;
   }
   getColor() {
-    return [255, 0, 0];
+    return [255, 100, 0];
   }
 }

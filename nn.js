@@ -200,6 +200,16 @@ class NN {
       clone.bias_h.map(mutateVal);
       return clone;
     }
+
+    getParams() {
+        let params = 0;
+        params += this.weights.rows*this.weights.cols;
+        params += this.weights_ho.rows*this.weights_ho.cols;
+        params += this.weights_ih.rows*this.weights_ih.cols;
+        params += this.bias.rows;
+        params += this.bias_h.rows;
+        return params;
+    }
 }
 
 function sigmoid(x) {
