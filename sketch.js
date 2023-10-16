@@ -12,7 +12,7 @@ let fittestPredatorSize;
 let canvasContainerWidth;
 let canvas;
 let cellSize = 7;
-const gridSize = 100;
+const gridSize = 42;
 
 class SliderManager {
   constructor() {
@@ -133,7 +133,7 @@ class Grid {
             this.cells[i][j] = new Wall(i, j);
           } else if (random(1) > 0.95) {
             this.cells[i][j] = new Organism(i, j);
-          } else if (random(1) > 0.99) {
+          } else if (random(1) > 0.95) {
             this.cells[i][j] = new Predator(i, j);
           } else {
             this.cells[i][j] = null;
@@ -366,6 +366,18 @@ class Organism extends CellEntity {
   getColor() {
     return [this.r, this.g, this.b];
   }
+
+  display() {
+    fill(this.getColor());
+    noStroke();
+    circle((this.x + 0.5) * cellSize, (this.y + 0.5) * cellSize, cellSize);
+    fill([255, 255, 255]);
+    noStroke();
+    circle((this.x + this.heading.x * 0.2 + 0.5) * cellSize, (this.y + this.heading.y * 0.25 + 0.5) * cellSize, cellSize * 0.6);
+    fill([0, 0, 0]);
+    noStroke();
+    circle((this.x + this.heading.x * 0.25 + 0.5) * cellSize, (this.y + this.heading.y * 0.3 + 0.5) * cellSize, cellSize * 0.4);
+  }
 }
 
 class Egg extends CellEntity {
@@ -412,7 +424,7 @@ class Predator extends CellEntity {
     this.size = 1000;
     this.heading = createVector(1, 0);
     this.acted = false;
-    this.brain = new NN(6, 3, 0, 2);
+    this.brain = new NN(6, 3, 0, 4);
     this.decisions = [];
     this.r = 255;
     this.g = 0;
@@ -468,7 +480,7 @@ class Predator extends CellEntity {
     for (let dir of directions) {
       let b = this.isBlocked(grid, dir);
       vision.push(b);
-      let p = this.getPreyDistance(grid, this.heading, 7);
+      let p = this.getPreyDistance(grid, dir, 7);
       vision.push(p);
     }
     this.decisions = this.brain.predict(vision);
@@ -547,6 +559,18 @@ class Predator extends CellEntity {
   
   getColor() {
     return [this.r, this.g, this.b];
+  }
+
+  display() {
+    fill(this.getColor());
+    noStroke();
+    rect(this.x * cellSize, this.y * cellSize, cellSize, cellSize);
+    fill([255, 255, 255]);
+    noStroke();
+    circle((this.x + this.heading.x * 0.2 + 0.5) * cellSize, (this.y + this.heading.y * 0.25 + 0.5) * cellSize, cellSize * 0.6);
+    fill([0, 0, 0]);
+    noStroke();
+    circle((this.x + this.heading.x * 0.25 + 0.5) * cellSize, (this.y + this.heading.y * 0.3 + 0.5) * cellSize, cellSize * 0.4);
   }
 }
 
