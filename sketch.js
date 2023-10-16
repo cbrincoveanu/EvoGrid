@@ -126,7 +126,7 @@ class Grid {
           let centerDist = Math.sqrt(Math.pow(i - this.rows / 2, 2) + Math.pow(j - this.cols / 2, 2));
           let centerFactor = centerDist / Math.sqrt(Math.pow(this.rows / 2, 2) + Math.pow(this.cols / 2, 2));
           let p = Math.abs(0.5 - centerFactor);
-          p = Math.pow(p, 1.5);
+          p = Math.pow(p, 2);
           if (random(1) < p) {
             this.cells[i][j] = new Wall(i, j);
           } else if (random(1) > 0.95) {
@@ -248,7 +248,7 @@ class Organism extends CellEntity {
     this.size = 500;
     this.heading = createVector(1, 0);
     this.acted = false;
-    this.brain = new NN(17, 3, 1, 2);
+    this.brain = new NN(19, 3, 1, 3);
     this.decisions = [];
     this.r = 0;
     this.g = 0;
@@ -284,6 +284,30 @@ class Organism extends CellEntity {
     return {r, g, b, d};
   }
 
+  smell(grid, maxDiff) {
+    let predatorSmell = -1;
+    let foodSmell = -1;
+    for (let dx = -maxDiff; dx <= maxDiff; dx++) {
+      for (let dy = -maxDiff; dy <= maxDiff; dy++) {
+        let x = this.x + dx;
+        let y = this.y + dy;
+        if (x >= 0 && x < grid.rows && y >= 0 && y < grid.cols && (dx != 0 || dy != 0)) {
+          let cell = grid.cells[x][y];
+          if (cell != null) {
+            let smell = 1 / Math.sqrt(dx * dx + dy * dy);
+            if (cell instanceof Predator) {
+              predatorSmell = Math.max(predatorSmell, smell);
+            }
+            if (cell instanceof Plant || cell instanceof DeadOrganism) {
+              foodSmell = Math.max(foodSmell, smell);
+            }
+          }
+        }
+      }
+    }
+    return {predatorSmell, foodSmell};
+  }
+
   perceive(grid) {
     this.acted = false;
     let vision = [];
@@ -297,6 +321,8 @@ class Organism extends CellEntity {
       let info = this.getColorAndDistance(grid, dir, 10);
       vision.push(info.r, info.g, info.b, info.d);
     }
+    let smellInfo = this.smell(grid, 4);
+    vision.push(smellInfo.predatorSmell, smellInfo.foodSmell);
     vision.push(Math.random());
     this.decisions = this.brain.predict(vision);
   }
@@ -420,7 +446,7 @@ class Predator extends CellEntity {
     this.size = 1000;
     this.heading = createVector(1, 0);
     this.acted = false;
-    this.brain = new NN(17, 3, 1, 2);
+    this.brain = new NN(18, 3, 1, 3);
     this.decisions = [];
     this.r = 255;
     this.g = 0;
@@ -456,6 +482,26 @@ class Predator extends CellEntity {
     return {r, g, b, d};
   }
 
+  smell(grid, maxDiff) {
+    let foodSmell = -1;
+    for (let dx = -maxDiff; dx <= maxDiff; dx++) {
+      for (let dy = -maxDiff; dy <= maxDiff; dy++) {
+        let x = this.x + dx;
+        let y = this.y + dy;
+        if (x >= 0 && x < grid.rows && y >= 0 && y < grid.cols && (dx != 0 || dy != 0)) {
+          let cell = grid.cells[x][y];
+          if (cell != null) {
+            let smell = 1 / Math.sqrt(dx * dx + dy * dy);
+            if (cell instanceof Organism || cell instanceof Egg) {
+              foodSmell = Math.max(foodSmell, smell);
+            }
+          }
+        }
+      }
+    }
+    return foodSmell;
+  }
+
   perceive(grid) {
     this.acted = false;
     let vision = [];
@@ -469,6 +515,7 @@ class Predator extends CellEntity {
       let info = this.getColorAndDistance(grid, dir, 10);
       vision.push(info.r, info.g, info.b, info.d);
     }
+    vision.push(this.smell(grid, 4));
     vision.push(Math.random());
     this.decisions = this.brain.predict(vision);
   }
@@ -612,6 +659,6 @@ class Plant extends CellEntity {
 
 class DeadOrganism extends CellEntity {
   getColor() {
-    return [50, 150, 80];
+    return [60, 120, 80];
   }
 }
