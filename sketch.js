@@ -11,7 +11,7 @@ let fittestPredatorSize;
 let canvasContainerWidth;
 let canvas;
 let cellSize;
-const gridSize = 42;
+const gridSize = 50;
 
 class SliderManager {
   constructor() {
@@ -126,7 +126,7 @@ class Grid {
           let centerDist = Math.sqrt(Math.pow(i - this.rows / 2, 2) + Math.pow(j - this.cols / 2, 2));
           let centerFactor = centerDist / Math.sqrt(Math.pow(this.rows / 2, 2) + Math.pow(this.cols / 2, 2));
           let p = Math.abs(0.5 - centerFactor);
-          // p = Math.pow(p, 1.5);
+          p = Math.pow(p, 1.5);
           if (random(1) < p) {
             this.cells[i][j] = new Wall(i, j);
           } else if (random(1) > 0.95) {
@@ -416,8 +416,8 @@ class Egg extends CellEntity {
 class Predator extends CellEntity {
   constructor(x, y) {
     super(x, y);
-    this.energy = 1000;
-    this.size = 1000;
+    this.energy = 750;
+    this.size = 750;
     this.heading = createVector(1, 0);
     this.acted = false;
     this.brain = new NN(17, 3, 1, 2);
@@ -498,22 +498,22 @@ class Predator extends CellEntity {
         this.x = newX;
         this.y = newY;
       } else if (grid.cells[newX][newY] instanceof Organism) {
-        this.energy += 450;
-        this.size += 450;
+        this.energy += 400;
+        this.size += 400;
         grid.cells[this.x][this.y] = null;
         grid.cells[newX][newY] = this;
         this.x = newX;
         this.y = newY;
       } else if (grid.cells[newX][newY] instanceof Egg) {
-        this.energy += 250;
-        this.size += 250;
+        this.energy += 200;
+        this.size += 200;
         grid.cells[this.x][this.y] = null;
         grid.cells[newX][newY] = this;
         this.x = newX;
         this.y = newY;
       } else if (grid.cells[newX][newY] instanceof DeadOrganism) {
-        this.energy += 100;
-        this.size += 100;
+        this.energy += 50;
+        this.size += 50;
         grid.cells[this.x][this.y] = null;
         grid.cells[newX][newY] = this;
         this.x = newX;
@@ -525,8 +525,8 @@ class Predator extends CellEntity {
         this.x = newX;
         this.y = newY;
       }
-      if (this.energy > 2000) {
-        this.energy = this.energy - 1000;
+      if (this.energy > 1500) {
+        this.energy = this.energy - 750;
         let newR = Math.min(Math.max((this.r + fittestPredator.r) / 2 + randomGaussian(0, 20), 150), 255);
         let newG = Math.min(Math.max((this.g + fittestPredator.g) / 2 + randomGaussian(0, 20), 0), 100);
         let newB = Math.min(Math.max((this.b + fittestPredator.b) / 2 + randomGaussian(0, 20), 0), 150);
@@ -575,7 +575,7 @@ class PredatorEgg extends CellEntity {
 
   grow(grid) {
     this.age++;
-    if (this.age > 300) {
+    if (this.age > 150) {
       let organism = new Predator(this.x, this.y);
       organism.heading = this.heading;
       organism.brain = this.brain;
