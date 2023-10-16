@@ -390,7 +390,7 @@ class Egg extends CellEntity {
 
   grow(grid) {
     this.age++;
-    if (this.age > 250) {
+    if (this.age > 150) {
       let organism = new Organism(this.x, this.y);
       organism.heading = this.heading;
       organism.brain = this.brain;
@@ -575,7 +575,7 @@ class PredatorEgg extends CellEntity {
 
   grow(grid) {
     this.age++;
-    if (this.age > 500) {
+    if (this.age > 300) {
       let organism = new Predator(this.x, this.y);
       organism.heading = this.heading;
       organism.brain = this.brain;
