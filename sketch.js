@@ -126,7 +126,7 @@ class Grid {
           let centerDist = Math.sqrt(Math.pow(i - this.rows / 2, 2) + Math.pow(j - this.cols / 2, 2));
           let centerFactor = centerDist / Math.sqrt(Math.pow(this.rows / 2, 2) + Math.pow(this.cols / 2, 2));
           let p = Math.abs(0.5 - centerFactor);
-          p = Math.pow(p, 2);
+          p = 0; // Math.pow(p, 2);
           if (random(1) < p) {
             this.cells[i][j] = new Wall(i, j);
           } else if (random(1) > 0.95) {
@@ -248,7 +248,7 @@ class Organism extends CellEntity {
     this.size = 500;
     this.heading = createVector(1, 0);
     this.acted = false;
-    this.brain = new NN(19, 3, 1, 3);
+    this.brain = new NN(19, 5, 1, 3);
     this.decisions = [];
     this.r = 0;
     this.g = 0;
@@ -329,6 +329,19 @@ class Organism extends CellEntity {
   
   act(grid) {
     this.acted = true;
+    let targetX = this.x + this.heading.x;
+    let targetY = this.y + this.heading.y;
+    if (this.decisions[3] > 0.5) {
+      if (grid.cells[targetX][targetY] === null) {
+        grid.cells[targetX][targetY] = new Earth(targetX, targetY);
+        this.energy -= 3;
+      }
+    } else if (this.decisions[4] > 0.5) {
+      if (grid.cells[targetX][targetY] instanceof Earth) {
+        grid.cells[targetX][targetY] = null;
+        this.energy -= 3;
+      }
+    }
     if (this.decisions[0] > 0.5) {
       this.heading = turnVector(this.heading, 1);
     }
@@ -344,7 +357,6 @@ class Organism extends CellEntity {
       newY += this.heading.y;
       this.energy -= 1;
     }
-    
     if (newX >= 0 && newX < grid.rows && newY >= 0 && newY < grid.cols) {
       if (grid.cells[newX][newY] === null) {
         grid.cells[this.x][this.y] = null;
@@ -651,6 +663,12 @@ class Wall extends CellEntity {
   }
 }
 
+class Earth extends CellEntity {
+  getColor() {
+    return [100, 80, 65];
+  }
+}
+
 class Plant extends CellEntity {
   getColor() {
     return [0, 255, 0];
@@ -659,6 +677,6 @@ class Plant extends CellEntity {
 
 class DeadOrganism extends CellEntity {
   getColor() {
-    return [60, 120, 80];
+    return [60, 130, 120];
   }
 }
