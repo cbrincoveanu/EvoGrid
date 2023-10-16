@@ -416,8 +416,8 @@ class Egg extends CellEntity {
 class Predator extends CellEntity {
   constructor(x, y) {
     super(x, y);
-    this.energy = 750;
-    this.size = 750;
+    this.energy = 1000;
+    this.size = 1000;
     this.heading = createVector(1, 0);
     this.acted = false;
     this.brain = new NN(17, 3, 1, 2);
@@ -525,8 +525,8 @@ class Predator extends CellEntity {
         this.x = newX;
         this.y = newY;
       }
-      if (this.energy > 1500) {
-        this.energy = this.energy - 750;
+      if (this.energy > 2000) {
+        this.energy = this.energy - 1000;
         let newR = Math.min(Math.max((this.r + fittestPredator.r) / 2 + randomGaussian(0, 20), 150), 255);
         let newG = Math.min(Math.max((this.g + fittestPredator.g) / 2 + randomGaussian(0, 20), 0), 100);
         let newB = Math.min(Math.max((this.b + fittestPredator.b) / 2 + randomGaussian(0, 20), 0), 150);
