@@ -4,7 +4,6 @@ let grid;
 let totalStepCount;
 let aliveCount;
 let predatorCount;
-let maxEnergy;
 let fittest;
 let fittestSize;
 let fittestPredator;
@@ -87,7 +86,6 @@ function setup() {
   displayManager = new DisplayManager();
   displayManager.addDisplay("Total steps", 0);
   displayManager.addDisplay("Alive count", 0);
-  displayManager.addDisplay("Max energy", 0);
   displayManager.addDisplay("Fittest size", 0);
   displayManager.addDisplay("Predator count", 0);
   displayManager.addDisplay("Fittest predator size", 0);
@@ -182,7 +180,6 @@ class Grid {
   }
 
   display() {
-    maxEnergy = -Infinity;
     fittestSize = -Infinity;
     fittestPredatorSize = -Infinity;
     aliveCount = 0;
@@ -193,7 +190,6 @@ class Grid {
           this.cells[i][j].display();
           if (this.cells[i][j] instanceof Organism) {
             aliveCount++;
-            maxEnergy = max(maxEnergy, this.cells[i][j].energy);
             if (this.cells[i][j].size > fittestSize) {
               fittestSize = this.cells[i][j].size
               fittest = this.cells[i][j]
@@ -201,7 +197,6 @@ class Grid {
           }
           if (this.cells[i][j] instanceof Predator) {
             predatorCount++;
-            maxEnergy = max(maxEnergy, this.cells[i][j].energy);
             if (this.cells[i][j].size > fittestPredatorSize) {
               fittestPredatorSize = this.cells[i][j].size
               fittestPredator = this.cells[i][j]
@@ -215,7 +210,6 @@ class Grid {
     }
     displayManager.setValue("Total steps", totalStepCount);
     displayManager.setValue("Alive count", aliveCount);
-    displayManager.setValue("Max energy", maxEnergy);
     displayManager.setValue("Fittest size", fittestSize + " (generation: " + fittest.generation + ", NN params: "+ fittest.brain.getParams() +")");
     displayManager.setValue("Predator count", predatorCount);
     displayManager.setValue("Fittest predator size", fittestPredatorSize + " (generation: " + fittestPredator.generation + ", NN params: "+ fittestPredator.brain.getParams() +")");
