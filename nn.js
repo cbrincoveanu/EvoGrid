@@ -8,7 +8,7 @@ class Matrix {
 
     // Fill the matrix with random values
     randomize() {
-        return this.map(val => randomGaussian(0, 1));
+        return this.map(val => randomGaussian(0, 0.1));
     }
 
     // Apply a function to every element of the matrix
@@ -185,7 +185,7 @@ class NN {
       }
       function mutateVal(val) {
         if (Math.random() < rate) {
-          return val + randomGaussian(0, 1);
+          return val + randomGaussian(0, 0.1);
         } else {
           return val;
         }
