@@ -11,7 +11,7 @@ let fittestPredator;
 let fittestPredatorSize;
 let canvasContainerWidth;
 let canvas;
-let cellSize = 7;
+let cellSize;
 const gridSize = 42;
 
 class SliderManager {
@@ -83,7 +83,7 @@ function setup() {
   sliderManager = new SliderManager();
   sliderManager.addSlider("Simulation speed (FPS)", 1, 60, 60, 1);
   sliderManager.addSlider("Mutation rate", 1, 100, 5, 100);
-  sliderManager.addSlider("Plant growth rate", 1, 100, 100, 100);
+  sliderManager.addSlider("Plant growth rate", 1, 100, 50, 100);
   displayManager = new DisplayManager();
   displayManager.addDisplay("Total steps", 0);
   displayManager.addDisplay("Alive count", 0);
@@ -128,12 +128,12 @@ class Grid {
           let centerDist = Math.sqrt(Math.pow(i - this.rows / 2, 2) + Math.pow(j - this.cols / 2, 2));
           let centerFactor = centerDist / Math.sqrt(Math.pow(this.rows / 2, 2) + Math.pow(this.cols / 2, 2));
           let p = Math.abs(0.5 - centerFactor);
-          p = Math.pow(p, 2);
+          // p = Math.pow(p, 1.5);
           if (random(1) < p) {
             this.cells[i][j] = new Wall(i, j);
           } else if (random(1) > 0.95) {
             this.cells[i][j] = new Organism(i, j);
-          } else if (random(1) > 0.95) {
+          } else if (random(1) > 0.98) {
             this.cells[i][j] = new Predator(i, j);
           } else {
             this.cells[i][j] = null;
@@ -210,7 +210,7 @@ class Grid {
         }
       }
     }
-    if (aliveCount == 0 || predatorCount == 0) {
+    if (aliveCount == 0) {
       this.initialize();
     }
     displayManager.setValue("Total steps", totalStepCount);
@@ -254,7 +254,7 @@ class Organism extends CellEntity {
     this.size = 500;
     this.heading = createVector(1, 0);
     this.acted = false;
-    this.brain = new NN(12, 3, 0, 4);
+    this.brain = new NN(17, 3, 1, 2);
     this.decisions = [];
     this.r = 0;
     this.g = 0;
@@ -272,7 +272,7 @@ class Organism extends CellEntity {
     while (distance < maxDistance) {
       posX += dx;
       posY += dy;
-      let cell = grid.cells[posY][posX];
+      let cell = grid.cells[posX][posY];
       if (cell !== null) {
         [r, g, b] = cell.getColor();
         r = r / 255;
@@ -296,12 +296,14 @@ class Organism extends CellEntity {
     const directions = [
       this.heading,
       turnVector(this.heading, 1),
+      turnVector(this.heading, 2),
       turnVector(this.heading, 3)
     ];
     for (let dir of directions) {
-      let info = this.getColorAndDistance(grid, dir, 7);
+      let info = this.getColorAndDistance(grid, dir, 10);
       vision.push(info.r, info.g, info.b, info.d);
     }
+    vision.push(Math.random());
     this.decisions = this.brain.predict(vision);
   }
   
@@ -330,21 +332,21 @@ class Organism extends CellEntity {
         this.x = newX;
         this.y = newY;
       } else if (grid.cells[newX][newY] instanceof Plant) {
-        this.energy += 500;
-        this.size += 500;
+        this.energy += 400;
+        this.size += 400;
         grid.cells[this.x][this.y] = null;
         grid.cells[newX][newY] = this;
         this.x = newX;
         this.y = newY;
       } else if (grid.cells[newX][newY] instanceof DeadOrganism) {
-        this.energy += 300;
-        this.size += 300;
+        this.energy += 200;
+        this.size += 200;
         grid.cells[this.x][this.y] = null;
         grid.cells[newX][newY] = this;
         this.x = newX;
         this.y = newY;
       }
-      if (this.energy > 2000) {
+      if (this.energy > 1000) {
         this.energy = this.energy - 500;
         let newR = Math.min(Math.max((this.r + fittest.r) / 2 + randomGaussian(0, 20), 0), 150);
         let newG = Math.min(Math.max((this.g + fittest.g) / 2 + randomGaussian(0, 20), 0), 100);
@@ -424,7 +426,7 @@ class Predator extends CellEntity {
     this.size = 1000;
     this.heading = createVector(1, 0);
     this.acted = false;
-    this.brain = new NN(6, 3, 0, 4);
+    this.brain = new NN(17, 3, 1, 2);
     this.decisions = [];
     this.r = 255;
     this.g = 0;
@@ -432,41 +434,32 @@ class Predator extends CellEntity {
     this.generation = 0;
   }
   
-  getPreyDistance(grid, direction, maxDistance) {
+  getColorAndDistance(grid, direction, maxDistance) {
     let dx = direction.x;
     let dy = direction.y;
     let posX = this.x;
     let posY = this.y;
     let distance = 1;
-    let p = -1;
+    let r, g, b, d;
     while (distance < maxDistance) {
       posX += dx;
       posY += dy;
-      let cell = grid.cells[posY][posX];
+      let cell = grid.cells[posX][posY];
       if (cell !== null) {
-        if (cell instanceof Organism || cell instanceof Egg) {
-          p = 1 / distance;
-        }
-        return p;
+        [r, g, b] = cell.getColor();
+        r = r / 255;
+        g = g / 255;
+        b = b / 255;
+        d = 1 / distance;
+        return {r, g, b, d};
       }
       distance++;
     }
-    return p;
-  }
-
-  isBlocked(grid, direction) {
-    let dx = direction.x;
-    let dy = direction.y;
-    let posX = this.x + dx;
-    let posY = this.y + dy;
-    let b = -1;
-    let cell = grid.cells[posY][posX];
-    if (cell !== null) {
-      if (cell instanceof Wall || cell instanceof Predator || cell instanceof PredatorEgg) {
-        b = 1;
-      }
-    }
-    return b;
+    r = -1;
+    g = -1;
+    b = -1;
+    d = -1;
+    return {r, g, b, d};
   }
 
   perceive(grid) {
@@ -475,14 +468,14 @@ class Predator extends CellEntity {
     const directions = [
       this.heading,
       turnVector(this.heading, 1),
+      turnVector(this.heading, 2),
       turnVector(this.heading, 3)
     ];
     for (let dir of directions) {
-      let b = this.isBlocked(grid, dir);
-      vision.push(b);
-      let p = this.getPreyDistance(grid, dir, 7);
-      vision.push(p);
+      let info = this.getColorAndDistance(grid, dir, 10);
+      vision.push(info.r, info.g, info.b, info.d);
     }
+    vision.push(Math.random());
     this.decisions = this.brain.predict(vision);
   }
   
@@ -511,15 +504,15 @@ class Predator extends CellEntity {
         this.x = newX;
         this.y = newY;
       } else if (grid.cells[newX][newY] instanceof Organism) {
-        this.energy += 500;
-        this.size += 500;
+        this.energy += 450;
+        this.size += 450;
         grid.cells[this.x][this.y] = null;
         grid.cells[newX][newY] = this;
         this.x = newX;
         this.y = newY;
       } else if (grid.cells[newX][newY] instanceof Egg) {
-        this.energy += 300;
-        this.size += 300;
+        this.energy += 250;
+        this.size += 250;
         grid.cells[this.x][this.y] = null;
         grid.cells[newX][newY] = this;
         this.x = newX;
@@ -532,13 +525,13 @@ class Predator extends CellEntity {
         this.x = newX;
         this.y = newY;
       } else if (grid.cells[newX][newY] instanceof Plant) {
-        this.energy -= 1;
+        this.energy -= 10;
         grid.cells[this.x][this.y] = null;
         grid.cells[newX][newY] = this;
         this.x = newX;
         this.y = newY;
       }
-      if (this.energy > 3000) {
+      if (this.energy > 2000) {
         this.energy = this.energy - 1000;
         let newR = Math.min(Math.max((this.r + fittestPredator.r) / 2 + randomGaussian(0, 20), 150), 255);
         let newG = Math.min(Math.max((this.g + fittestPredator.g) / 2 + randomGaussian(0, 20), 0), 100);
