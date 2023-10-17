@@ -69,7 +69,7 @@ class DisplayManager {
 
   updateDisplays() {
     for (const [key, value] of Object.entries(this.displays)) {
-      value.html("<strong>" + key + ":</strong> " + this.values[key]);
+      value.html("<strong>" + key + ":</strong><span style=\"float: right;\">" + this.values[key] + "</span>");
     }
   }
 }
@@ -252,7 +252,7 @@ class Organism extends CellEntity {
     this.score = 0;
     this.heading = createVector(1, 0);
     this.acted = false;
-    this.brain = new NN(19, 5, 1, 3);
+    this.brain = new NN(20, 5, 1, 3);
     this.decisions = [];
     this.r = 0;
     this.g = 0;
@@ -327,6 +327,7 @@ class Organism extends CellEntity {
     }
     let smellInfo = this.smell(grid, 4);
     vision.push(smellInfo.predatorSmell, smellInfo.foodSmell);
+    vision.push(this.energy / 1000);
     vision.push(Math.random());
     this.decisions = this.brain.predict(vision);
   }
@@ -462,7 +463,7 @@ class Predator extends CellEntity {
     this.score = 0;
     this.heading = createVector(1, 0);
     this.acted = false;
-    this.brain = new NN(18, 3, 1, 3);
+    this.brain = new NN(19, 3, 1, 3);
     this.decisions = [];
     this.r = 255;
     this.g = 0;
@@ -532,6 +533,7 @@ class Predator extends CellEntity {
       vision.push(info.r, info.g, info.b, info.d);
     }
     vision.push(this.smell(grid, 4));
+    vision.push(this.energy / 2000);
     vision.push(Math.random());
     this.decisions = this.brain.predict(vision);
   }
