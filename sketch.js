@@ -9,7 +9,8 @@ let fittestScore;
 let canvasContainerWidth;
 let canvas;
 let cellSize;
-const gridSize = 42;
+const gridSize = 31;
+const MAX_SMELL = 20;
 
 class SliderManager {
   constructor() {
@@ -97,11 +98,12 @@ function setup() {
   canvas.parent('canvas-container');
   sliderManager = new SliderManager();
   sliderManager.addSlider("Simulation speed (FPS)", 1, 60, 30, 1);
-  sliderManager.addSlider("Plant growth rate", 1, 100, 50, 100);
+  sliderManager.addSlider("Plant growth rate", 1, 100, 10, 100);
   sliderManager.addSlider("Mutation rate", 1, 100, 5, 100);
   checkboxManager = new CheckboxManager();
-  checkboxManager.addCheckbox("Allow earth placement", false);
-  checkboxManager.addCheckbox("Allow earth removal", false);
+  //checkboxManager.addCheckbox("Allow earth placement", false);
+  //checkboxManager.addCheckbox("Allow earth removal", false);
+  checkboxManager.addCheckbox("Optimal behavior", true);
   displayManager = new DisplayManager();
   displayManager.addDisplay("Total steps", 0);
   displayManager.addDisplay("Alive count", 0);
@@ -119,6 +121,18 @@ function draw() {
   grid.display();
 }
 
+function mouseClicked(){
+  let i = Math.floor(mouseX / cellSize);
+  let j = Math.floor(mouseY / cellSize);
+  if (i > 0 && j > 0 && i < grid.rows - 1 && j < grid.cols - 1) {
+    if (grid.cells[i][j] instanceof Wall) {
+      grid.cells[i][j] = new Air(i, j);
+    } else {
+      grid.cells[i][j] = new Wall(i, j);
+    }
+  }
+}
+
 function windowResized() {
   canvasContainerWidth = select('#canvas-container').width;
   resizeCanvas(canvasContainerWidth, canvasContainerWidth);
@@ -132,32 +146,130 @@ class Grid {
     this.cells = [];
   }
 
+  getFrontierCells(i, j) {
+    const offsets = [
+      createVector(2, 0),
+      createVector(-2, 0),
+      createVector(0, 2),
+      createVector(0, -2),
+    ];
+    let frontiers = []
+    for (const offset of offsets) {
+      let x = i + offset.x;
+      let y = j + offset.y;
+      if (x > 0 && y > 0 && x < this.rows - 1 && y < this.cols - 1) {
+        if (this.cells[x][y] instanceof Wall) {
+          frontiers.push(createVector(x, y));
+        }
+      }
+    }
+    return frontiers;
+  }
+
+  getBetweenCells(i, j) {
+    const offsets = [
+      createVector(1, 0),
+      createVector(-1, 0),
+      createVector(0, 1),
+      createVector(0, -1),
+    ];
+    let betweens = []
+    for (const offset of offsets) {
+      let x = i + 2 * offset.x;
+      let y = j + 2 * offset.y;
+      if (x > 0 && y > 0 && x < this.rows - 1 && y < this.cols - 1) {
+        if (this.cells[x][y] === null) {
+          betweens.push(createVector(i + offset.x, j + offset.y));
+        }
+      }
+    }
+    return betweens;
+  }
+
   initialize() {
     totalStepCount = 0;
     for (let i = 0; i < this.rows; i++) {
       this.cells[i] = [];
       for (let j = 0; j < this.cols; j++) {
-        if (i === 0 || j === 0 || i === this.rows - 1 || j === this.cols - 1) {
+        this.cells[i][j] = new Wall(i, j);
+        /*if (i === 0 || j === 0 || i === this.rows - 1 || j === this.cols - 1) {
           this.cells[i][j] = new Wall(i, j);
+        } else {
+          this.cells[i][j] = null;
         } else {
           let centerDist = Math.sqrt(Math.pow(i - this.rows / 2, 2) + Math.pow(j - this.cols / 2, 2));
           let centerFactor = centerDist / Math.sqrt(Math.pow(this.rows / 2, 2) + Math.pow(this.cols / 2, 2));
           let p = Math.abs(0.5 - centerFactor);
-          p = Math.pow(p, 2);
+          p = 0; // Math.pow(p, 2);
           if (random(1) < p) {
             this.cells[i][j] = new Wall(i, j);
           } else if (random(1) > 0.95) {
             this.cells[i][j] = new Organism(i, j);
+          } else if (random(1) > 0.7) {
+            this.cells[i][j] = new Plant(i, j);
           } else {
-            this.cells[i][j] = null;
+            this.cells[i][j] = new Air(i, j);
+          }
+        }*/
+      }
+    }
+    this.cells[1 + 2 * Math.floor(gridSize/4)][1 + 2 * Math.floor(gridSize/4)] = null;
+    /*let frontiers = this.getFrontierCells(1, 1);
+    
+    const merge = (a, b, predicate = (a, b) => a === b) => {
+      const c = [...a];
+      b.forEach((bItem) => (c.some((cItem) => predicate(bItem, cItem)) ? null : c.push(bItem)))
+      return c;
+    }
+
+    for (let i = 0; i < 31; i++) {
+    //while (frontiers.length > 0) {
+      let frontierIndex = Math.floor(Math.random() * frontiers.length);
+      let frontier = frontiers[frontierIndex];
+      this.cells[frontier.x][frontier.y] = null;
+      let betweens = this.getBetweenCells(frontier.x, frontier.y);
+      let between = betweens[Math.floor(Math.random() * betweens.length)];
+      this.cells[between.x][between.y] = null;
+      frontiers = frontiers.splice(frontierIndex, 1);
+      frontiers = merge(frontiers, this.getFrontierCells(frontier.x, frontier.y));
+      console.log(frontiers);
+    }*/
+    while (true) {
+      let frontiers = [];
+      for (let i = 1; i < this.rows - 1; i+=2) {
+        for (let j = 1; j < this.cols - 1; j+=2) {
+          if (this.cells[i][j] instanceof Wall) {
+            let betweens = this.getBetweenCells(i, j);
+            if (betweens.length > 0) {
+              frontiers.push(createVector(i, j));
+            }
           }
         }
       }
+      if (frontiers.length == 0) {
+        break;
+      }
+      let frontier = frontiers[Math.floor(Math.random() * frontiers.length)];
+      this.cells[frontier.x][frontier.y] = null;
+      let betweens = this.getBetweenCells(frontier.x, frontier.y);
+      let between = betweens[Math.floor(Math.random() * betweens.length)];
+      this.cells[between.x][between.y] = null;
+      while (random(1) < 0.2) {
+        let between = betweens[Math.floor(Math.random() * betweens.length)];
+        this.cells[between.x][between.y] = null;
+      }
     }
-    for (let i = 1; i < this.rows - 1; i++) {
-      for (let j = 1; j < this.cols - 1; j++) {
-        if (this.cells[i][j] === null && random(1) > 0.7) {
-          this.cells[i][j] = new Plant(i, j);
+
+    for (let i = 0; i < this.rows; i++) {
+      for (let j = 0; j < this.cols; j++) {
+        if (this.cells[i][j] === null) {
+          if (random(1) > 0.98) {
+            this.cells[i][j] = new Organism(i, j);
+          } else if (random(1) > 0.99) {
+            this.cells[i][j] = new Plant(i, j);
+          } else {
+            this.cells[i][j] = new Air(i, j);
+          }
         }
       }
     }
@@ -169,12 +281,59 @@ class Grid {
     if (random() < sliderManager.getValue("Plant growth rate")) {
       let x = floor(random(this.rows));
       let y = floor(random(this.cols));
-      for (let i = 0; i < 42 && this.cells[x][y] !== null; i++) {
+      for (let i = 0; i < 42 && ! this.cells[x][y] instanceof Air; i++) {
         x = floor(random(this.rows));
         y = floor(random(this.cols));
       }
-      if (this.cells[x][y] === null) {
+      if (this.cells[x][y] instanceof Air) {
         this.cells[x][y] = new Plant(x, y);
+      }
+    }
+    // Air activity
+    const directions = [
+      createVector(1, 0),
+      createVector(-1, 0),
+      createVector(0, 1),
+      createVector(0, -1),
+    ];
+    for (let i = 0; i < this.rows; i++) {
+      for (let j = 0; j < this.cols; j++) {
+        if (this.cells[i][j] instanceof Air) {
+          this.cells[i][j].newPlantSmell = Math.max(this.cells[i][j].newPlantSmell - 1, 0);
+        }
+      }
+    }
+    for (let i = 0; i < this.rows; i++) {
+      for (let j = 0; j < this.cols; j++) {
+        if (this.cells[i][j] instanceof Plant) {
+          for (const direction of directions) {
+            let neighbor = this.cells[i + direction.x][j + direction.y]
+            if (neighbor instanceof Air) {
+              neighbor.newPlantSmell = MAX_SMELL;
+            }
+          }
+        } else if (this.cells[i][j] instanceof DeadOrganism) {
+          for (const direction of directions) {
+            let neighbor = this.cells[i + direction.x][j + direction.y]
+            if (neighbor instanceof Air) {
+              neighbor.newPlantSmell = Math.max(neighbor.newPlantSmell, MAX_SMELL / 2);
+            }
+          }
+        } else if (this.cells[i][j] instanceof Air) {
+          for (const direction of directions) {
+            let neighbor = this.cells[i + direction.x][j + direction.y]
+            if (neighbor instanceof Air) {
+              neighbor.newPlantSmell = Math.max(this.cells[i][j].plantSmell - 1, neighbor.newPlantSmell);
+            }
+          }
+        }
+      }
+    }
+    for (let i = 0; i < this.rows; i++) {
+      for (let j = 0; j < this.cols; j++) {
+        if (this.cells[i][j] instanceof Air) {
+          this.cells[i][j].plantSmell = this.cells[i][j].newPlantSmell;
+        }
       }
     }
     // Organism activity
@@ -254,7 +413,7 @@ class Organism extends CellEntity {
     this.score = 0;
     this.heading = createVector(1, 0);
     this.acted = false;
-    this.brain = new NN(19, 6, 1, 3);
+    this.brain = new NN(5, 4, 0, 4);
     this.decisions = [];
     this.r = 255;
     this.g = 0;
@@ -262,52 +421,20 @@ class Organism extends CellEntity {
     this.generation = 0;
   }
 
-  getColorAndDistance(grid, direction, maxDistance) {
-    let dx = direction.x;
-    let dy = direction.y;
-    let posX = this.x;
-    let posY = this.y;
-    let distance = 1;
-    let r, g, b, d;
-    while (distance < maxDistance) {
-      posX += dx;
-      posY += dy;
-      let cell = grid.cells[posX][posY];
-      if (cell !== null) {
-        [r, g, b] = cell.getColor();
-        r = r / 255;
-        g = g / 255;
-        b = b / 255;
-        d = 1 / distance;
-        return {r, g, b, d};
-      }
-      distance++;
+  directionalSmell(grid, direction) {
+    const neighbor = grid.cells[this.x + direction.x][this.y + direction.y];
+    if (neighbor instanceof Plant) {
+      return 1;
     }
-    r = -1;
-    g = -1;
-    b = -1;
-    d = -1;
-    return {r, g, b, d};
-  }
-
-  smell(grid, maxDiff) {
-    let foodSmell = -1;
-    for (let dx = -maxDiff; dx <= maxDiff; dx++) {
-      for (let dy = -maxDiff; dy <= maxDiff; dy++) {
-        let x = this.x + dx;
-        let y = this.y + dy;
-        if (x >= 0 && x < grid.rows && y >= 0 && y < grid.cols && (dx != 0 || dy != 0)) {
-          let cell = grid.cells[x][y];
-          if (cell != null) {
-            let smell = 1 / Math.sqrt(dx * dx + dy * dy);
-            if (cell instanceof Plant || cell instanceof DeadOrganism) {
-              foodSmell = Math.max(foodSmell, smell);
-            }
-          }
-        }
-      }
+    if (neighbor instanceof DeadOrganism) {
+      return 0.8;
     }
-    return foodSmell;
+    if (neighbor instanceof Air) {
+      return 0.8 * neighbor.plantSmell / MAX_SMELL;
+    }
+    if (neighbor instanceof Wall || neighbor instanceof Organism || neighbor instanceof Egg) {
+      return -1;
+    }
   }
 
   perceive(grid) {
@@ -319,70 +446,77 @@ class Organism extends CellEntity {
       turnVector(this.heading, 2),
       turnVector(this.heading, 3)
     ];
-    for (let dir of directions) {
-      let info = this.getColorAndDistance(grid, dir, 10);
-      vision.push(info.r, info.g, info.b, info.d);
+    for (const direction of directions) {
+      let smell = this.directionalSmell(grid, direction);
+      vision.push(smell);
     }
-    let smellInfo = this.smell(grid, 4);
-    vision.push(smellInfo);
-    vision.push(this.energy / 1000);
+    //vision.push(this.energy / 1000);
     vision.push(Math.random());
-    this.decisions = this.brain.predict(vision);
+    if (checkboxManager.getValue("Optimal behavior")) {
+      this.decisions = [0, 0, 0, 0];
+      let maxIndex = 0;
+      for (let i = 1; i <= 3; i++) {
+        if (vision[i] > vision[maxIndex]) {
+          maxIndex = i;
+        }
+      }
+      this.decisions[maxIndex] = 1;
+    } else {
+      this.decisions = this.brain.predict(vision);
+    }
   }
   
   act(grid) {
     this.acted = true;
     // Earth placement
-    let targetX = this.x + this.heading.x;
+    /*let targetX = this.x + this.heading.x;
     let targetY = this.y + this.heading.y;
     if (this.decisions[3] > 0.5 && checkboxManager.getValue('Allow earth placement')) {
-      if (grid.cells[targetX][targetY] === null) {
+      if (grid.cells[targetX][targetY] instanceof Air) {
         grid.cells[targetX][targetY] = new Earth(targetX, targetY);
         this.energy -= 3;
       }
     } else if (this.decisions[4] > 0.5 && checkboxManager.getValue('Allow earth removal')) {
       if (grid.cells[targetX][targetY] instanceof Earth) {
-        grid.cells[targetX][targetY] = null;
+        grid.cells[targetX][targetY] = new Air(targetX, targetY);
         this.energy -= 3;
       }
-    }
+    }*/
     // Turn
-    let maxIndex = 1;
-    for (let i = 2; i <= 3; i++) {
+    let maxIndex = 0;
+    for (let i = 1; i <= 3; i++) {
       if (this.decisions[i] > this.decisions[maxIndex]) {
         maxIndex = i;
       }
     }
-    if (this.decisions[maxIndex] > 0.5) {
-      this.heading = turnVector(this.heading, maxIndex);
-    }
+    this.heading = turnVector(this.heading, maxIndex);
     // Further actions
     let newX = this.x;
     let newY = this.y;
     let oldX = this.x;
     let oldY = this.y;
-    if (this.decisions[0] > 0.5) {
+    if (this.decisions[maxIndex] > 0.5) {
       newX += this.heading.x;
       newY += this.heading.y;
       this.energy -= 1;
     }
     if (newX >= 0 && newX < grid.rows && newY >= 0 && newY < grid.cols) {
-      if (grid.cells[newX][newY] === null) {
-        grid.cells[this.x][this.y] = null;
+      if (grid.cells[newX][newY] instanceof Air) {
+        grid.cells[this.x][this.y] = new Air(this.x, this.y);
         grid.cells[newX][newY] = this;
         this.x = newX;
         this.y = newY;
       } else if (grid.cells[newX][newY] instanceof Plant) {
         this.energy += 400;
         this.score += 400;
-        grid.cells[this.x][this.y] = null;
+        grid.cells[this.x][this.y] = new Air(this.x, this.y);
         grid.cells[newX][newY] = this;
         this.x = newX;
         this.y = newY;
       } else if (grid.cells[newX][newY] instanceof DeadOrganism) {
         this.energy += 200;
         this.score += 200;
-        grid.cells[this.x][this.y] = null;
+        grid.cells[this.x][this.y] = new Air(this.x, this.y);
         grid.cells[newX][newY] = this;
         this.x = newX;
         this.y = newY;
@@ -481,5 +615,20 @@ class Plant extends CellEntity {
 class DeadOrganism extends CellEntity {
   getColor() {
     return [60, 130, 120];
+  }
+}
+
+class Air extends CellEntity {
+  constructor(x, y) {
+    super(x, y);
+    this.plantSmell = 0;
+    this.newPlantSmell = 0;
+  }
+
+  /*getColor() {
+    return [255 - this.plantSmell * 5, 255, 255 - this.plantSmell * 5];
+  }*/
+
+  display() {
   }
 }
