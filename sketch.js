@@ -1,4 +1,5 @@
 let sliderManager;
+let checkboxManager;
 let displayManager;
 let grid;
 let totalStepCount;
@@ -44,6 +45,24 @@ class SliderManager {
   }
 }
 
+class CheckboxManager {
+  constructor() {
+    this.checkboxes = {};
+    this.checkboxContainer = select('#checkboxes');
+  }
+
+  addCheckbox(name, defaultValue) {
+    let checkboxDiv = createDiv().parent(this.checkboxContainer);
+    let checkbox = createCheckbox(name, defaultValue);
+    checkbox.parent(checkboxDiv);
+    this.checkboxes[name] = checkbox;
+  }
+
+  getValue(name) {
+    return this.checkboxes[name].checked();
+  }
+}
+
 class DisplayManager {
   constructor() {
     this.displays = {};
@@ -83,6 +102,9 @@ function setup() {
   sliderManager.addSlider("Simulation speed (FPS)", 1, 60, 30, 1);
   sliderManager.addSlider("Plant growth rate", 1, 100, 50, 100);
   sliderManager.addSlider("Mutation rate", 1, 100, 5, 100);
+  checkboxManager = new CheckboxManager();
+  checkboxManager.addCheckbox("Allow earth placement", false);
+  checkboxManager.addCheckbox("Allow earth removal", false);
   displayManager = new DisplayManager();
   displayManager.addDisplay("Total steps", 0);
   displayManager.addDisplay("Alive count", 0);
@@ -252,7 +274,7 @@ class Organism extends CellEntity {
     this.score = 0;
     this.heading = createVector(1, 0);
     this.acted = false;
-    this.brain = new NN(20, 5, 1, 3);
+    this.brain = new NN(20, 6, 1, 3);
     this.decisions = [];
     this.r = 0;
     this.g = 0;
@@ -334,30 +356,36 @@ class Organism extends CellEntity {
   
   act(grid) {
     this.acted = true;
+    // Earth placement
     let targetX = this.x + this.heading.x;
     let targetY = this.y + this.heading.y;
-    if (this.decisions[3] > 0.5) {
+    if (this.decisions[3] > 0.5 && checkboxManager.getValue('Allow earth placement')) {
       if (grid.cells[targetX][targetY] === null) {
         grid.cells[targetX][targetY] = new Earth(targetX, targetY);
         this.energy -= 3;
       }
-    } else if (this.decisions[4] > 0.5) {
+    } else if (this.decisions[4] > 0.5 && checkboxManager.getValue('Allow earth removal')) {
       if (grid.cells[targetX][targetY] instanceof Earth) {
         grid.cells[targetX][targetY] = null;
         this.energy -= 3;
       }
     }
-    if (this.decisions[0] > 0.5) {
-      this.heading = turnVector(this.heading, 1);
+    // Turn
+    let maxIndex = 1;
+    for (let i = 2; i <= 3; i++) {
+      if (this.decisions[i] > this.decisions[maxIndex]) {
+        maxIndex = i;
+      }
     }
-    if (this.decisions[1] > 0.5) {
-      this.heading = turnVector(this.heading, 3);
+    if (this.decisions[maxIndex] > 0.5) {
+      this.heading = turnVector(this.heading, maxIndex);
     }
+    // Further actions
     let newX = this.x;
     let newY = this.y;
     let oldX = this.x;
     let oldY = this.y;
-    if (this.decisions[2] > 0.5) {
+    if (this.decisions[0] > 0.5) {
       newX += this.heading.x;
       newY += this.heading.y;
       this.energy -= 1;
