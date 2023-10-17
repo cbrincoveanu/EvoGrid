@@ -9,7 +9,7 @@ let fittestScore;
 let canvasContainerWidth;
 let canvas;
 let cellSize;
-const gridSize = 31;
+const gridSize = 29;
 const MAX_SMELL = 20;
 
 class SliderManager {
@@ -98,12 +98,12 @@ function setup() {
   canvas.parent('canvas-container');
   sliderManager = new SliderManager();
   sliderManager.addSlider("Simulation speed (FPS)", 1, 60, 30, 1);
-  sliderManager.addSlider("Plant growth rate", 1, 100, 10, 100);
+  sliderManager.addSlider("Plant growth rate", 1, 100, 20, 100);
   sliderManager.addSlider("Mutation rate", 1, 100, 5, 100);
   checkboxManager = new CheckboxManager();
   //checkboxManager.addCheckbox("Allow earth placement", false);
   //checkboxManager.addCheckbox("Allow earth removal", false);
-  checkboxManager.addCheckbox("Optimal behavior", true);
+  checkboxManager.addCheckbox("Optimal behavior", false);
   displayManager = new DisplayManager();
   displayManager.addDisplay("Total steps", 0);
   displayManager.addDisplay("Alive count", 0);
@@ -263,9 +263,9 @@ class Grid {
     for (let i = 0; i < this.rows; i++) {
       for (let j = 0; j < this.cols; j++) {
         if (this.cells[i][j] === null) {
-          if (random(1) > 0.98) {
+          if (random(1) > 0.9) {
             this.cells[i][j] = new Organism(i, j);
-          } else if (random(1) > 0.99) {
+          } else if (random(1) > 0.7) {
             this.cells[i][j] = new Plant(i, j);
           } else {
             this.cells[i][j] = new Air(i, j);
@@ -371,9 +371,6 @@ class Grid {
           }
         }
       }
-    }
-    if (aliveCount == 0) {
-      this.initialize();
     }
     displayManager.setValue("Total steps", totalStepCount);
     displayManager.setValue("Alive count", aliveCount);
