@@ -9,8 +9,8 @@ let fittestScore;
 let canvasContainerWidth;
 let canvas;
 let cellSize;
-const gridSize = 29;
-const MAX_SMELL = 20;
+const gridSize = 31;
+const MAX_SMELL = 30;
 
 class SliderManager {
   constructor() {
@@ -98,7 +98,7 @@ function setup() {
   canvas.parent('canvas-container');
   sliderManager = new SliderManager();
   sliderManager.addSlider("Simulation speed (FPS)", 1, 60, 30, 1);
-  sliderManager.addSlider("Plant growth rate", 1, 100, 20, 100);
+  sliderManager.addSlider("Plant growth rate", 1, 100, 15, 100);
   sliderManager.addSlider("Mutation rate", 1, 100, 5, 100);
   checkboxManager = new CheckboxManager();
   //checkboxManager.addCheckbox("Allow earth placement", false);
@@ -107,7 +107,9 @@ function setup() {
   displayManager = new DisplayManager();
   displayManager.addDisplay("Total steps", 0);
   displayManager.addDisplay("Alive count", 0);
-  displayManager.addDisplay("Fittest score", 0);
+  displayManager.addDisplay("Best score", 0);
+  displayManager.addDisplay("Generation", 0);
+  displayManager.addDisplay("Params", 0);
   grid = new Grid(gridSize, gridSize);
   grid.initialize();
 }
@@ -254,7 +256,7 @@ class Grid {
       let betweens = this.getBetweenCells(frontier.x, frontier.y);
       let between = betweens[Math.floor(Math.random() * betweens.length)];
       this.cells[between.x][between.y] = null;
-      while (random(1) < 0.2) {
+      while (random(1) < 0.3) {
         let between = betweens[Math.floor(Math.random() * betweens.length)];
         this.cells[between.x][between.y] = null;
       }
@@ -374,7 +376,9 @@ class Grid {
     }
     displayManager.setValue("Total steps", totalStepCount);
     displayManager.setValue("Alive count", aliveCount);
-    displayManager.setValue("Fittest score", fittestScore + " (generation: " + fittest.generation + ", NN params: "+ fittest.brain.getParams() +")");
+    displayManager.setValue("Best score", fittestScore);
+    displayManager.setValue("Generation", fittest.generation);
+    displayManager.setValue("Params", fittest.brain.getParams());
   }
 }
 
@@ -447,7 +451,7 @@ class Organism extends CellEntity {
       let smell = this.directionalSmell(grid, direction);
       vision.push(smell);
     }
-    //vision.push(this.energy / 1000);
+    //vision.push(this.energy / 1200);
     vision.push(Math.random());
     if (checkboxManager.getValue("Optimal behavior")) {
       this.decisions = [0, 0, 0, 0];
@@ -518,7 +522,7 @@ class Organism extends CellEntity {
         this.x = newX;
         this.y = newY;
       }
-      if (this.energy > 1000) {
+      if (this.energy > 1200) {
         this.energy = this.energy - 500;
         let newR = Math.min(Math.max((this.r + fittest.r) / 2 + randomGaussian(0, 20), 150), 255);
         let newG = Math.min(Math.max((this.g + fittest.g) / 2 + randomGaussian(0, 20), 0), 100);
