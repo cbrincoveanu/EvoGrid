@@ -100,8 +100,8 @@ function setup() {
   sliderManager = new SliderManager();
   sliderManager.addSlider("Simulation speed (FPS)", 1, 60, 30, 1);
   sliderManager.addSlider("Organism speed", 1, 10, 4, 10);
-  sliderManager.addSlider("Plant growth rate", 1, 100, 15, 100);
-  sliderManager.addSlider("Minimum plant count", 0, 20, 1, 1);
+  sliderManager.addSlider("Plant growth rate", 0, 100, 20, 100);
+  sliderManager.addSlider("Minimum plant count", 0, 10, 1, 1);
   sliderManager.addSlider("Mutation rate", 1, 100, 5, 100);
   checkboxManager = new CheckboxManager();
   //checkboxManager.addCheckbox("Allow earth placement", false);
@@ -271,7 +271,7 @@ class Grid {
         if (this.cells[i][j] === null) {
           if (random(1) > 0.9) {
             this.cells[i][j] = new Organism(i, j);
-          } else if (random(1) > 0.7) {
+          } else if (random(1) > 0.6) {
             this.cells[i][j] = new Plant(i, j);
           } else {
             this.cells[i][j] = new Air(i, j);
@@ -484,6 +484,7 @@ class Organism extends CellEntity {
     if (moveOffsetLength > speed) {
       this.moveOffset.x += this.heading.x * speed;
       this.moveOffset.y += this.heading.y * speed;
+      this.energy--;
       return;
     }
     if (moveOffsetLength > 0) {
@@ -522,7 +523,7 @@ class Organism extends CellEntity {
     if (this.decisions[maxIndex] > 0.5) {
       newX += this.heading.x;
       newY += this.heading.y;
-      this.energy -= speed;
+      // this.energy -= speed;
     }
     if (newX >= 0 && newX < grid.rows && newY >= 0 && newY < grid.cols) {
       if (grid.cells[newX][newY] instanceof Air) {
@@ -534,8 +535,8 @@ class Organism extends CellEntity {
         this.moveOffset.x += this.headstart * this.heading.x;
         this.moveOffset.y += this.headstart * this.heading.y;
       } else if (grid.cells[newX][newY] instanceof Plant) {
-        this.energy += 400;
-        this.score += 400;
+        this.energy += 300;
+        this.score += 300;
         grid.cells[this.x][this.y] = new Air(this.x, this.y);
         grid.cells[newX][newY] = this;
         this.x = newX;
@@ -544,8 +545,8 @@ class Organism extends CellEntity {
         this.moveOffset.x += this.headstart * this.heading.x;
         this.moveOffset.y += this.headstart * this.heading.y;
       } else if (grid.cells[newX][newY] instanceof DeadOrganism) {
-        this.energy += 200;
-        this.score += 200;
+        this.energy += 100;
+        this.score += 100;
         grid.cells[this.x][this.y] = new Air(this.x, this.y);
         grid.cells[newX][newY] = this;
         this.x = newX;
