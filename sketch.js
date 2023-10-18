@@ -10,7 +10,7 @@ let fittestScore;
 let canvasContainerWidth;
 let canvas;
 let cellSize;
-const gridSize = 31;
+const gridSize = 29;
 const MAX_SMELL = 30;
 
 class SliderManager {
@@ -98,10 +98,10 @@ function setup() {
   canvas = createCanvas(canvasContainerWidth, canvasContainerWidth);
   canvas.parent('canvas-container');
   sliderManager = new SliderManager();
-  sliderManager.addSlider("Simulation speed (FPS)", 1, 60, 30, 1);
-  sliderManager.addSlider("Organism speed", 1, 10, 4, 10);
-  sliderManager.addSlider("Minotaur speed", 1, 10, 3, 10);
-  sliderManager.addSlider("Plant growth rate", 0, 100, 20, 100);
+  sliderManager.addSlider("Simulation speed (FPS)", 1, 60, 40, 1);
+  sliderManager.addSlider("Organism speed", 1, 100, 45, 100);
+  sliderManager.addSlider("Minotaur speed", 1, 100, 25, 100);
+  sliderManager.addSlider("Plant growth rate", 0, 100, 15, 100);
   sliderManager.addSlider("Minimum plant count", 0, 10, 1, 1);
   sliderManager.addSlider("Mutation rate", 1, 100, 5, 100);
   checkboxManager = new CheckboxManager();
@@ -120,7 +120,7 @@ function setup() {
 }
 
 function draw() {
-  background(220);
+  background([220, 220, 240]);
   frameRate(sliderManager.getValue("Simulation speed (FPS)"));
   sliderManager.updateDisplays();
   displayManager.updateDisplays();
@@ -263,7 +263,7 @@ class Grid {
       let betweens = this.getBetweenCells(frontier.x, frontier.y);
       let between = betweens[Math.floor(Math.random() * betweens.length)];
       this.cells[between.x][between.y] = null;
-      while (random(1) < 0.4) {
+      while (random(1) < 0.5) {
         let between = betweens[Math.floor(Math.random() * betweens.length)];
         this.cells[between.x][between.y] = null;
       }
@@ -274,7 +274,7 @@ class Grid {
         if (this.cells[i][j] === null) {
           if (random(1) > 0.9) {
             this.cells[i][j] = new Organism(i, j);
-          } else if (random(1) > 0.6) {
+          } else if (random(1) > 0.5) {
             this.cells[i][j] = new Plant(i, j);
           } else {
             this.cells[i][j] = new Air(i, j);
@@ -780,42 +780,42 @@ class Minotaur extends CellEntity {
   }
   
   getColor() {
-    return [0, 0, 255];
+    return [0, 0, 225];
   }
 
   display() {
     fill(this.getColor());
     noStroke();
     rect((this.x + this.moveOffset.x) * cellSize, (this.y + this.moveOffset.y) * cellSize, cellSize, cellSize);
-    fill([130, 110, 50]);
+    fill([200, 180, 10]);
     let right = turnVector(this.heading, 1);
     let x1 = (this.x + this.moveOffset.x + this.heading.x * 0.1 + right.x * 0.1 + 0.5) * cellSize;
     let y1 = (this.y + this.moveOffset.y + this.heading.y * 0.1 + right.y * 0.1 + 0.5) * cellSize;
     let x2 = (this.x + this.moveOffset.x + this.heading.x * 0.1 + right.x * 0.5 + 0.5) * cellSize;
     let y2 = (this.y + this.moveOffset.y + this.heading.y * 0.1 + right.y * 0.5 + 0.5) * cellSize;
-    let x3 = (this.x + this.moveOffset.x + this.heading.x * 0.6 + right.x * 0.4 + 0.5) * cellSize;
-    let y3 = (this.y + this.moveOffset.y + this.heading.y * 0.6 + right.y * 0.4 + 0.5) * cellSize;
+    let x3 = (this.x + this.moveOffset.x + this.heading.x * 0.65 + right.x * 0.45 + 0.5) * cellSize;
+    let y3 = (this.y + this.moveOffset.y + this.heading.y * 0.65 + right.y * 0.45 + 0.5) * cellSize;
     triangle(x1, y1, x2, y2, x3, y3);
     let left = turnVector(this.heading, 3);
     x1 = (this.x + this.moveOffset.x + this.heading.x * 0.1 + left.x * 0.1 + 0.5) * cellSize;
     y1 = (this.y + this.moveOffset.y + this.heading.y * 0.1 + left.y * 0.1 + 0.5) * cellSize;
     x2 = (this.x + this.moveOffset.x + this.heading.x * 0.1 + left.x * 0.5 + 0.5) * cellSize;
     y2 = (this.y + this.moveOffset.y + this.heading.y * 0.1 + left.y * 0.5 + 0.5) * cellSize;
-    x3 = (this.x + this.moveOffset.x + this.heading.x * 0.6 + left.x * 0.4 + 0.5) * cellSize;
-    y3 = (this.y + this.moveOffset.y + this.heading.y * 0.6 + left.y * 0.4 + 0.5) * cellSize;
+    x3 = (this.x + this.moveOffset.x + this.heading.x * 0.65 + left.x * 0.45 + 0.5) * cellSize;
+    y3 = (this.y + this.moveOffset.y + this.heading.y * 0.65 + left.y * 0.45 + 0.5) * cellSize;
     triangle(x1, y1, x2, y2, x3, y3);
     fill([255, 255, 255]);
     noStroke();
-    circle(((this.x + this.moveOffset.x) + this.heading.x * 0.25 + 0.5) * cellSize, ((this.y + this.moveOffset.y) + this.heading.y * 0.3 + 0.5) * cellSize, cellSize * 0.5);
+    circle(((this.x + this.moveOffset.x) + this.heading.x * 0.25 + 0.5) * cellSize, ((this.y + this.moveOffset.y) + this.heading.y * 0.3 + 0.5) * cellSize, cellSize * 0.4);
     fill([0, 0, 0]);
     noStroke();
-    circle(((this.x + this.moveOffset.x) + this.heading.x * 0.3 + 0.5) * cellSize, ((this.y + this.moveOffset.y) + this.heading.y * 0.35 + 0.5) * cellSize, cellSize * 0.4);
+    circle(((this.x + this.moveOffset.x) + this.heading.x * 0.3 + 0.5) * cellSize, ((this.y + this.moveOffset.y) + this.heading.y * 0.35 + 0.5) * cellSize, cellSize * 0.25);
   }
 }
 
 class Wall extends CellEntity {
   getColor() {
-    return [0, 0, 7];
+    return [0, 0, 20];
   }
 }
 
