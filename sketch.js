@@ -100,6 +100,7 @@ function setup() {
   sliderManager = new SliderManager();
   sliderManager.addSlider("Simulation speed (FPS)", 1, 60, 30, 1);
   sliderManager.addSlider("Organism speed", 1, 10, 4, 10);
+  sliderManager.addSlider("Minotaur speed", 1, 10, 3, 10);
   sliderManager.addSlider("Plant growth rate", 0, 100, 20, 100);
   sliderManager.addSlider("Minimum plant count", 0, 10, 1, 1);
   sliderManager.addSlider("Mutation rate", 1, 100, 5, 100);
@@ -219,7 +220,9 @@ class Grid {
         }*/
       }
     }
-    this.cells[1 + 2 * Math.floor(gridSize/4)][1 + 2 * Math.floor(gridSize/4)] = null;
+    const centerX = 1 + 2 * Math.floor(gridSize/4);
+    const centerY = centerX;
+    this.cells[centerX][centerY] = null;
     /*let frontiers = this.getFrontierCells(1, 1);
     
     const merge = (a, b, predicate = (a, b) => a === b) => {
@@ -260,7 +263,7 @@ class Grid {
       let betweens = this.getBetweenCells(frontier.x, frontier.y);
       let between = betweens[Math.floor(Math.random() * betweens.length)];
       this.cells[between.x][between.y] = null;
-      while (random(1) < 0.3) {
+      while (random(1) < 0.4) {
         let between = betweens[Math.floor(Math.random() * betweens.length)];
         this.cells[between.x][between.y] = null;
       }
@@ -279,6 +282,8 @@ class Grid {
         }
       }
     }
+
+    this.cells[centerX][centerY] = new Minotaur(centerX, centerY);
   }
 
   update() {
@@ -287,7 +292,7 @@ class Grid {
     if (random() < sliderManager.getValue("Plant growth rate") || plantCount < sliderManager.getValue("Minimum plant count")) {
       let x = floor(random(this.rows));
       let y = floor(random(this.cols));
-      for (let i = 0; i < 42 && ! this.cells[x][y] instanceof Air; i++) {
+      for (let i = 0; i < 42 && ! (this.cells[x][y] instanceof Air); i++) {
         x = floor(random(this.rows));
         y = floor(random(this.cols));
       }
@@ -306,6 +311,8 @@ class Grid {
       for (let j = 0; j < this.cols; j++) {
         if (this.cells[i][j] instanceof Air) {
           this.cells[i][j].newPlantSmell = Math.max(this.cells[i][j].newPlantSmell - 1, 0);
+          this.cells[i][j].newOrganismSmell = Math.max(this.cells[i][j].newOrganismSmell - 1, 0);
+          this.cells[i][j].newMinotaurSmell = Math.max(this.cells[i][j].newMinotaurSmell - 1, 0);
         }
       }
     }
@@ -325,11 +332,33 @@ class Grid {
               neighbor.newPlantSmell = Math.max(neighbor.newPlantSmell, MAX_SMELL / 2);
             }
           }
+        } else if (this.cells[i][j] instanceof Organism) {
+          for (const direction of directions) {
+            let neighbor = this.cells[i + direction.x][j + direction.y]
+            if (neighbor instanceof Air) {
+              neighbor.newOrganismSmell = MAX_SMELL;
+            }
+          }
+        } else if (this.cells[i][j] instanceof Egg) {
+          for (const direction of directions) {
+            let neighbor = this.cells[i + direction.x][j + direction.y]
+            if (neighbor instanceof Air) {
+              neighbor.newOrganismSmell = Math.max(neighbor.newOrganismSmell, MAX_SMELL / 2);
+            }
+          }
+        } else if (this.cells[i][j] instanceof Minotaur) {
+          for (const direction of directions) {
+            let neighbor = this.cells[i + direction.x][j + direction.y]
+            if (neighbor instanceof Air) {
+              neighbor.newMinotaurSmell = MAX_SMELL;
+            }
+          }
         } else if (this.cells[i][j] instanceof Air) {
           for (const direction of directions) {
             let neighbor = this.cells[i + direction.x][j + direction.y]
             if (neighbor instanceof Air) {
               neighbor.newPlantSmell = Math.max(this.cells[i][j].plantSmell - 1, neighbor.newPlantSmell);
+              neighbor.newOrganismSmell = Math.max(this.cells[i][j].organismSmell - 1, neighbor.newOrganismSmell);
             }
           }
         }
@@ -339,13 +368,15 @@ class Grid {
       for (let j = 0; j < this.cols; j++) {
         if (this.cells[i][j] instanceof Air) {
           this.cells[i][j].plantSmell = this.cells[i][j].newPlantSmell;
+          this.cells[i][j].organismSmell = this.cells[i][j].newOrganismSmell;
+          this.cells[i][j].minotaurSmell = this.cells[i][j].newMinotaurSmell;
         }
       }
     }
     // Organism activity
     for (let i = 0; i < this.rows; i++) {
       for (let j = 0; j < this.cols; j++) {
-        if (this.cells[i][j] instanceof Organism) {
+        if (this.cells[i][j] instanceof Organism || this.cells[i][j] instanceof Minotaur) {
           this.cells[i][j].perceive(this);
         } else if (this.cells[i][j] instanceof Egg) {
           this.cells[i][j].grow(this);
@@ -354,7 +385,7 @@ class Grid {
     }
     for (let i = 0; i < this.rows; i++) {
       for (let j = 0; j < this.cols; j++) {
-        if (this.cells[i][j] instanceof Organism && !this.cells[i][j].acted) {
+        if ((this.cells[i][j] instanceof Organism || this.cells[i][j] instanceof Minotaur) && !this.cells[i][j].acted) {
           this.cells[i][j].act(this);
         }
       }
@@ -422,7 +453,7 @@ class Organism extends CellEntity {
     this.score = 0;
     this.heading = createVector(1, 0);
     this.acted = false;
-    this.brain = new NN(5, 4, 0, 4);
+    this.brain = new NN(9, 4, 0, 4);
     this.decisions = [];
     this.r = 255;
     this.g = 0;
@@ -432,7 +463,7 @@ class Organism extends CellEntity {
     this.headstart = 0;
   }
 
-  directionalSmell(grid, direction) {
+  directionalPlantSmell(grid, direction) {
     const neighbor = grid.cells[this.x + direction.x][this.y + direction.y];
     if (neighbor instanceof Plant) {
       return 1;
@@ -443,9 +474,18 @@ class Organism extends CellEntity {
     if (neighbor instanceof Air) {
       return 0.8 * neighbor.plantSmell / MAX_SMELL;
     }
-    if (neighbor instanceof Wall || neighbor instanceof Organism || neighbor instanceof Egg) {
-      return -1;
+    return -1;
+  }
+
+  directionalMinotaurSmell(grid, direction) {
+    const neighbor = grid.cells[this.x + direction.x][this.y + direction.y];
+    if (neighbor instanceof Minotaur) {
+      return 1;
     }
+    if (neighbor instanceof Air) {
+      return 0.8 * neighbor.minotaurSmell / MAX_SMELL;
+    }
+    return -1;
   }
 
   perceive(grid) {
@@ -458,8 +498,8 @@ class Organism extends CellEntity {
       turnVector(this.heading, 3)
     ];
     for (const direction of directions) {
-      let smell = this.directionalSmell(grid, direction);
-      vision.push(smell);
+      vision.push(this.directionalPlantSmell(grid, direction));
+      vision.push(this.directionalMinotaurSmell(grid, direction));
     }
     //vision.push(this.energy / 1200);
     vision.push(Math.random());
@@ -628,9 +668,138 @@ class Egg extends CellEntity {
   }
 }
 
+class Minotaur extends CellEntity {
+  constructor(x, y) {
+    super(x, y);
+    this.heading = createVector(1, 0);
+    this.acted = false;
+    this.decisions = [];
+    this.moveOffset = createVector(0, 0);
+    this.headstart = 0;
+  }
+
+  directionalSmell(grid, direction) {
+    const neighbor = grid.cells[this.x + direction.x][this.y + direction.y];
+    if (neighbor instanceof Organism) {
+      return 1;
+    }
+    if (neighbor instanceof DeadOrganism || neighbor instanceof Egg) {
+      return 0.8;
+    }
+    if (neighbor instanceof Air) {
+      return 0.8 * neighbor.organismSmell / MAX_SMELL;
+    }
+    if (neighbor instanceof Wall) {
+      return -1;
+    }
+  }
+
+  perceive(grid) {
+    this.acted = false;
+    let vision = [];
+    const directions = [
+      this.heading,
+      turnVector(this.heading, 1),
+      turnVector(this.heading, 2),
+      turnVector(this.heading, 3)
+    ];
+    for (const direction of directions) {
+      let smell = this.directionalSmell(grid, direction);
+      vision.push(smell);
+    }
+    this.decisions = [0, 0, 0, 0];
+    let maxIndex = 0;
+    for (let i = 1; i <= 3; i++) {
+      if (vision[i] > vision[maxIndex]) {
+        maxIndex = i;
+      }
+    }
+    this.decisions[maxIndex] = 1;
+  }
+  
+  act(grid) {
+    this.acted = true;
+    let moveOffsetLength = Math.sqrt(this.moveOffset.x * this.moveOffset.x + this.moveOffset.y * this.moveOffset.y);
+    let speed = sliderManager.getValue("Minotaur speed");
+    if (moveOffsetLength > speed) {
+      this.moveOffset.x += this.heading.x * speed;
+      this.moveOffset.y += this.heading.y * speed;
+      this.energy--;
+      return;
+    }
+    if (moveOffsetLength > 0) {
+      this.headstart = speed - moveOffsetLength;
+    } else {
+      this.headstart = 0;
+    }
+    this.moveOffset = createVector(0, 0);
+    // Turn
+    let maxIndex = 0;
+    for (let i = 1; i <= 3; i++) {
+      if (this.decisions[i] > this.decisions[maxIndex]) {
+        maxIndex = i;
+      }
+    }
+    this.heading = turnVector(this.heading, maxIndex);
+    // Further actions
+    let newX = this.x;
+    let newY = this.y;
+    let oldX = this.x;
+    let oldY = this.y;
+    if (this.decisions[maxIndex] > 0.5) {
+      newX += this.heading.x;
+      newY += this.heading.y;
+    }
+    if (newX >= 0 && newX < grid.rows && newY >= 0 && newY < grid.cols) {
+      if (!(grid.cells[newX][newY] instanceof Wall)) {
+        grid.cells[this.x][this.y] = new Air(this.x, this.y);
+        grid.cells[newX][newY] = this;
+        this.x = newX;
+        this.y = newY;
+        this.moveOffset = turnVector(this.heading, 2);
+        this.moveOffset.x += this.headstart * this.heading.x;
+        this.moveOffset.y += this.headstart * this.heading.y;
+      }
+    }
+  }
+  
+  getColor() {
+    return [0, 0, 255];
+  }
+
+  display() {
+    fill(this.getColor());
+    noStroke();
+    rect((this.x + this.moveOffset.x) * cellSize, (this.y + this.moveOffset.y) * cellSize, cellSize, cellSize);
+    fill([130, 110, 50]);
+    let right = turnVector(this.heading, 1);
+    let x1 = (this.x + this.moveOffset.x + this.heading.x * 0.1 + right.x * 0.1 + 0.5) * cellSize;
+    let y1 = (this.y + this.moveOffset.y + this.heading.y * 0.1 + right.y * 0.1 + 0.5) * cellSize;
+    let x2 = (this.x + this.moveOffset.x + this.heading.x * 0.1 + right.x * 0.5 + 0.5) * cellSize;
+    let y2 = (this.y + this.moveOffset.y + this.heading.y * 0.1 + right.y * 0.5 + 0.5) * cellSize;
+    let x3 = (this.x + this.moveOffset.x + this.heading.x * 0.6 + right.x * 0.4 + 0.5) * cellSize;
+    let y3 = (this.y + this.moveOffset.y + this.heading.y * 0.6 + right.y * 0.4 + 0.5) * cellSize;
+    triangle(x1, y1, x2, y2, x3, y3);
+    let left = turnVector(this.heading, 3);
+    x1 = (this.x + this.moveOffset.x + this.heading.x * 0.1 + left.x * 0.1 + 0.5) * cellSize;
+    y1 = (this.y + this.moveOffset.y + this.heading.y * 0.1 + left.y * 0.1 + 0.5) * cellSize;
+    x2 = (this.x + this.moveOffset.x + this.heading.x * 0.1 + left.x * 0.5 + 0.5) * cellSize;
+    y2 = (this.y + this.moveOffset.y + this.heading.y * 0.1 + left.y * 0.5 + 0.5) * cellSize;
+    x3 = (this.x + this.moveOffset.x + this.heading.x * 0.6 + left.x * 0.4 + 0.5) * cellSize;
+    y3 = (this.y + this.moveOffset.y + this.heading.y * 0.6 + left.y * 0.4 + 0.5) * cellSize;
+    triangle(x1, y1, x2, y2, x3, y3);
+    fill([255, 255, 255]);
+    noStroke();
+    circle(((this.x + this.moveOffset.x) + this.heading.x * 0.25 + 0.5) * cellSize, ((this.y + this.moveOffset.y) + this.heading.y * 0.3 + 0.5) * cellSize, cellSize * 0.5);
+    fill([0, 0, 0]);
+    noStroke();
+    circle(((this.x + this.moveOffset.x) + this.heading.x * 0.3 + 0.5) * cellSize, ((this.y + this.moveOffset.y) + this.heading.y * 0.35 + 0.5) * cellSize, cellSize * 0.4);
+  }
+}
+
 class Wall extends CellEntity {
   getColor() {
-    return [0, 0, 0];
+    return [0, 0, 7];
   }
 }
 
@@ -642,7 +811,7 @@ class Earth extends CellEntity {
 
 class Plant extends CellEntity {
   getColor() {
-    return [0, 255, 0];
+    return [10, 245, 5];
   }
 }
 
@@ -657,6 +826,10 @@ class Air extends CellEntity {
     super(x, y);
     this.plantSmell = 0;
     this.newPlantSmell = 0;
+    this.organismSmell = 0;
+    this.newOrganismSmell = 0;
+    this.minotaurSmell = 0;
+    this.newMinotaurSmell = 0;
   }
 
   display() {
