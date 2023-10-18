@@ -4,6 +4,7 @@ let displayManager;
 let grid;
 let totalStepCount;
 let aliveCount;
+let plantCount;
 let fittest;
 let fittestScore;
 let canvasContainerWidth;
@@ -99,6 +100,7 @@ function setup() {
   sliderManager = new SliderManager();
   sliderManager.addSlider("Simulation speed (FPS)", 1, 60, 30, 1);
   sliderManager.addSlider("Plant growth rate", 1, 100, 15, 100);
+  sliderManager.addSlider("Minimum plant count", 0, 20, 1, 1);
   sliderManager.addSlider("Mutation rate", 1, 100, 5, 100);
   checkboxManager = new CheckboxManager();
   //checkboxManager.addCheckbox("Allow earth placement", false);
@@ -106,6 +108,7 @@ function setup() {
   checkboxManager.addCheckbox("Optimal behavior", false);
   displayManager = new DisplayManager();
   displayManager.addDisplay("Total steps", 0);
+  displayManager.addDisplay("Plant count", 0);
   displayManager.addDisplay("Alive count", 0);
   displayManager.addDisplay("Best score", 0);
   displayManager.addDisplay("Generation", 0);
@@ -280,7 +283,7 @@ class Grid {
   update() {
     totalStepCount++;
     // Randomly add plants
-    if (random() < sliderManager.getValue("Plant growth rate")) {
+    if (random() < sliderManager.getValue("Plant growth rate") || plantCount < sliderManager.getValue("Minimum plant count")) {
       let x = floor(random(this.rows));
       let y = floor(random(this.cols));
       for (let i = 0; i < 42 && ! this.cells[x][y] instanceof Air; i++) {
@@ -360,6 +363,7 @@ class Grid {
   display() {
     fittestScore = -Infinity;
     aliveCount = 0;
+    plantCount = 0;
     for (let i = 0; i < this.rows; i++) {
       for (let j = 0; j < this.cols; j++) {
         if (this.cells[i][j]) {
@@ -370,11 +374,14 @@ class Grid {
               fittestScore = this.cells[i][j].score
               fittest = this.cells[i][j]
             }
+          } else if (this.cells[i][j] instanceof Plant) {
+            plantCount++;
           }
         }
       }
     }
     displayManager.setValue("Total steps", totalStepCount);
+    displayManager.setValue("Plant count", plantCount);
     displayManager.setValue("Alive count", aliveCount);
     displayManager.setValue("Best score", fittestScore);
     displayManager.setValue("Generation", fittest.generation);
