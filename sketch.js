@@ -499,6 +499,8 @@ class Organism extends CellEntity {
     ];
     for (const direction of directions) {
       vision.push(this.directionalPlantSmell(grid, direction));
+    }
+    for (const direction of directions) {
       vision.push(this.directionalMinotaurSmell(grid, direction));
     }
     //vision.push(this.energy / 1200);
@@ -511,7 +513,21 @@ class Organism extends CellEntity {
           maxIndex = i;
         }
       }
-      this.decisions[maxIndex] = 1;
+      let maxMinotaurIndex = 4;
+      let minMinotaurIndex = 4;
+      for (let i = 5; i <= 7; i++) {
+        if (vision[i] > vision[maxMinotaurIndex]) {
+          maxMinotaurIndex = i;
+        }
+        if ((vision[i] < vision[minMinotaurIndex] && vision[i] >= 0) || vision[minMinotaurIndex] < 0) {
+          minMinotaurIndex = i;
+        }
+      }
+      if (vision[maxMinotaurIndex] > vision[maxIndex]) {
+        this.decisions[minMinotaurIndex - 4] = 1;
+      } else {
+        this.decisions[maxIndex] = 1;
+      }
     } else {
       this.decisions = this.brain.predict(vision);
     }
