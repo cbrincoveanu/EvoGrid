@@ -99,6 +99,7 @@ function setup() {
   canvas.parent('canvas-container');
   sliderManager = new SliderManager();
   sliderManager.addSlider("Simulation speed (FPS)", 1, 60, 30, 1);
+  sliderManager.addSlider("Organism speed", 1, 10, 4, 10);
   sliderManager.addSlider("Plant growth rate", 1, 100, 15, 100);
   sliderManager.addSlider("Minimum plant count", 0, 20, 1, 1);
   sliderManager.addSlider("Mutation rate", 1, 100, 5, 100);
@@ -427,6 +428,8 @@ class Organism extends CellEntity {
     this.g = 0;
     this.b = 0;
     this.generation = 0;
+    this.moveOffset = createVector(0, 0);
+    this.headstart = 0;
   }
 
   directionalSmell(grid, direction) {
@@ -476,6 +479,19 @@ class Organism extends CellEntity {
   
   act(grid) {
     this.acted = true;
+    let moveOffsetLength = Math.sqrt(this.moveOffset.x * this.moveOffset.x + this.moveOffset.y * this.moveOffset.y);
+    let speed = sliderManager.getValue("Organism speed");
+    if (moveOffsetLength > speed) {
+      this.moveOffset.x += this.heading.x * speed;
+      this.moveOffset.y += this.heading.y * speed;
+      return;
+    }
+    if (moveOffsetLength > 0) {
+      this.headstart = speed - moveOffsetLength;
+    } else {
+      this.headstart = 0;
+    }
+    this.moveOffset = createVector(0, 0);
     // Earth placement
     /*let targetX = this.x + this.heading.x;
     let targetY = this.y + this.heading.y;
@@ -506,7 +522,7 @@ class Organism extends CellEntity {
     if (this.decisions[maxIndex] > 0.5) {
       newX += this.heading.x;
       newY += this.heading.y;
-      this.energy -= 1;
+      this.energy -= speed;
     }
     if (newX >= 0 && newX < grid.rows && newY >= 0 && newY < grid.cols) {
       if (grid.cells[newX][newY] instanceof Air) {
@@ -514,6 +530,9 @@ class Organism extends CellEntity {
         grid.cells[newX][newY] = this;
         this.x = newX;
         this.y = newY;
+        this.moveOffset = turnVector(this.heading, 2);
+        this.moveOffset.x += this.headstart * this.heading.x;
+        this.moveOffset.y += this.headstart * this.heading.y;
       } else if (grid.cells[newX][newY] instanceof Plant) {
         this.energy += 400;
         this.score += 400;
@@ -521,6 +540,9 @@ class Organism extends CellEntity {
         grid.cells[newX][newY] = this;
         this.x = newX;
         this.y = newY;
+        this.moveOffset = turnVector(this.heading, 2);
+        this.moveOffset.x += this.headstart * this.heading.x;
+        this.moveOffset.y += this.headstart * this.heading.y;
       } else if (grid.cells[newX][newY] instanceof DeadOrganism) {
         this.energy += 200;
         this.score += 200;
@@ -528,6 +550,9 @@ class Organism extends CellEntity {
         grid.cells[newX][newY] = this;
         this.x = newX;
         this.y = newY;
+        this.moveOffset = turnVector(this.heading, 2);
+        this.moveOffset.x += this.headstart * this.heading.x;
+        this.moveOffset.y += this.headstart * this.heading.y;
       }
       if (this.energy > 1200) {
         this.energy = this.energy - 500;
@@ -555,13 +580,13 @@ class Organism extends CellEntity {
   display() {
     fill(this.getColor());
     noStroke();
-    rect(this.x * cellSize, this.y * cellSize, cellSize, cellSize);
+    rect((this.x + this.moveOffset.x) * cellSize, (this.y + this.moveOffset.y) * cellSize, cellSize, cellSize);
     fill([255, 255, 255]);
     noStroke();
-    circle((this.x + this.heading.x * 0.2 + 0.5) * cellSize, (this.y + this.heading.y * 0.25 + 0.5) * cellSize, cellSize * 0.6);
+    circle(((this.x + this.moveOffset.x) + this.heading.x * 0.2 + 0.5) * cellSize, ((this.y + this.moveOffset.y) + this.heading.y * 0.25 + 0.5) * cellSize, cellSize * 0.6);
     fill([0, 0, 0]);
     noStroke();
-    circle((this.x + this.heading.x * 0.25 + 0.5) * cellSize, (this.y + this.heading.y * 0.3 + 0.5) * cellSize, cellSize * 0.4);
+    circle(((this.x + this.moveOffset.x) + this.heading.x * 0.25 + 0.5) * cellSize, ((this.y + this.moveOffset.y) + this.heading.y * 0.3 + 0.5) * cellSize, cellSize * 0.4);
   }
 }
 
@@ -632,10 +657,6 @@ class Air extends CellEntity {
     this.plantSmell = 0;
     this.newPlantSmell = 0;
   }
-
-  /*getColor() {
-    return [255 - this.plantSmell * 5, 255, 255 - this.plantSmell * 5];
-  }*/
 
   display() {
   }
