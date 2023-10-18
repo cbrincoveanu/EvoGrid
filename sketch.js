@@ -98,9 +98,9 @@ function setup() {
   canvas = createCanvas(canvasContainerWidth, canvasContainerWidth);
   canvas.parent('canvas-container');
   sliderManager = new SliderManager();
-  sliderManager.addSlider("Simulation speed (FPS)", 1, 60, 40, 1);
-  sliderManager.addSlider("Organism speed", 1, 100, 45, 100);
-  sliderManager.addSlider("Minotaur speed", 1, 100, 25, 100);
+  sliderManager.addSlider("Simulation speed (FPS)", 1, 60, 30, 1);
+  sliderManager.addSlider("Organism speed", 1, 100, 40, 100);
+  sliderManager.addSlider("Minotaur speed", 1, 100, 20, 100);
   sliderManager.addSlider("Plant growth rate", 0, 100, 15, 100);
   sliderManager.addSlider("Minimum plant count", 0, 10, 1, 1);
   sliderManager.addSlider("Mutation rate", 1, 100, 5, 100);
