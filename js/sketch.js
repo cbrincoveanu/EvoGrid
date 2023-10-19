@@ -92,6 +92,48 @@ class Grid {
     return frontiers;
   }
 
+  // Count open Neighbors
+  countOpenNeighbors(i, j) {
+    const offsets = [
+      createVector(1, 0),
+      createVector(-1, 0),
+      createVector(0, 1),
+      createVector(0, -1),
+    ];
+    let openNeighbors = 0;
+    for (const offset of offsets) {
+      let x = i + offset.x;
+      let y = j + offset.y;
+      if (x > 0 && y > 0 && x < this.rows - 1 && y < this.cols - 1) {
+        if (this.cells[x][y] === null) {
+          openNeighbors++;
+        }
+      }
+    }
+    return openNeighbors;
+  }
+
+  // Get closed neighbors
+  getClosedNeighbors(i, j) {
+    const offsets = [
+      createVector(1, 0),
+      createVector(-1, 0),
+      createVector(0, 1),
+      createVector(0, -1),
+    ];
+    let closedNeighbors = [];
+    for (const offset of offsets) {
+      let x = i + offset.x;
+      let y = j + offset.y;
+      if (x > 0 && y > 0 && x < this.rows - 1 && y < this.cols - 1) {
+        if (this.cells[x][y] instanceof Wall) {
+          closedNeighbors.push(createVector(i + offset.x, j + offset.y));
+        }
+      }
+    }
+    return closedNeighbors;
+  }
+
   getBetweenCells(i, j) {
     const offsets = [
       createVector(1, 0),
@@ -143,12 +185,39 @@ class Grid {
       let betweens = this.getBetweenCells(frontier.x, frontier.y);
       let between = betweens[Math.floor(Math.random() * betweens.length)];
       this.cells[between.x][between.y] = null;
-      while (random(1) < 0.5) {
-        let between = betweens[Math.floor(Math.random() * betweens.length)];
-        this.cells[between.x][between.y] = null;
-      }
     }
 
+    //Remove dead ends
+    let totalClosedNeighbors;
+    do {
+      totalClosedNeighbors = [];
+      for (let i = 1; i < this.rows - 1; i+=2) {
+        for (let j = 1; j < this.cols - 1; j+=2) {
+          if (this.countOpenNeighbors(i, j) == 1) {
+            let closedNeighbors = this.getClosedNeighbors(i, j);
+            totalClosedNeighbors = totalClosedNeighbors.concat(closedNeighbors);
+          }
+        }
+      }
+      const counts = {};
+      for (const neighbor of totalClosedNeighbors) {
+        counts[neighbor] = (counts[neighbor] || 0) + 1;
+      }
+      let maxValue = -Infinity;
+      for(const [key, value] of Object.entries(counts)) {
+        if(value > maxValue) {
+          maxValue = value;
+        }
+      }
+      for (const neighbor of totalClosedNeighbors) {
+        if (counts[neighbor] == maxValue) {
+          this.cells[neighbor.x][neighbor.y] = null;
+          break;
+        }
+      }
+    } while (totalClosedNeighbors.length > 0);
+
+    // Fill with organisms, plants, and air
     for (let i = 0; i < this.rows; i++) {
       for (let j = 0; j < this.cols; j++) {
         if (this.cells[i][j] === null) {
