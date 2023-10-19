@@ -564,12 +564,15 @@ class Organism extends CellEntity {
     fill(this.getColor());
     noStroke();
     rect((this.x + this.moveOffset.x) * cellSize, (this.y + this.moveOffset.y) * cellSize, cellSize, cellSize);
-    fill([255, 255, 255]);
-    noStroke();
-    circle(((this.x + this.moveOffset.x) + this.heading.x * 0.2 + 0.5) * cellSize, ((this.y + this.moveOffset.y) + this.heading.y * 0.25 + 0.5) * cellSize, cellSize * 0.6);
-    fill([0, 0, 0]);
-    noStroke();
-    circle(((this.x + this.moveOffset.x) + this.heading.x * 0.25 + 0.5) * cellSize, ((this.y + this.moveOffset.y) + this.heading.y * 0.3 + 0.5) * cellSize, cellSize * 0.4);
+    let sides = [turnVector(this.heading, 1), turnVector(this.heading, 3)];
+    for (const side of sides) {
+      fill([255, 255, 255]);
+      noStroke();
+      circle((this.x + this.moveOffset.x + this.heading.x * 0.2 + side.x * 0.25 + 0.5) * cellSize, (this.y + this.moveOffset.y + this.heading.y * 0.25 + side.y * 0.25 + 0.5) * cellSize, cellSize * 0.45);
+      fill([0, 0, 0]);
+      noStroke();
+      circle((this.x + this.moveOffset.x + this.heading.x * 0.25 + side.x * 0.25 + 0.5) * cellSize, (this.y + this.moveOffset.y + this.heading.y * 0.3 + side.y * 0.25 + 0.5) * cellSize, cellSize * 0.3);
+    }
   }
 }
 
