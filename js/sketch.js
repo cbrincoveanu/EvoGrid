@@ -13,85 +13,6 @@ let cellSize;
 const gridSize = 29;
 const MAX_SMELL = 30;
 
-class SliderManager {
-  constructor() {
-    this.sliders = {};
-    this.displays = {};
-    this.divisors = {};
-    this.sliderContainer = select('#sliders');
-  }
-
-  addSlider(name, minValue, maxValue, defaultValue, divisor) {
-    let sliderDiv = createDiv().parent(this.sliderContainer);
-    let label = createElement('label', name);
-    label.parent(sliderDiv);
-    this.displays[name] = label;
-    let slider = createSlider(minValue, maxValue, defaultValue);
-    slider.parent(sliderDiv);
-    slider.style('width', '100%');
-    this.sliders[name] = slider;
-    this.divisors[name] = divisor;
-  }
-
-  getValue(name) {
-    return this.sliders[name].value() / this.divisors[name];
-  }
-
-  updateDisplays() {
-    for (const [key, value] of Object.entries(this.displays)) {
-      value.html(key + ": " + this.sliders[key].value() / this.divisors[key]);
-    }
-  }
-}
-
-class CheckboxManager {
-  constructor() {
-    this.checkboxes = {};
-    this.checkboxContainer = select('#checkboxes');
-  }
-
-  addCheckbox(name, defaultValue) {
-    let checkboxDiv = createDiv().parent(this.checkboxContainer);
-    let checkbox = createCheckbox(name, defaultValue);
-    checkbox.parent(checkboxDiv);
-    this.checkboxes[name] = checkbox;
-  }
-
-  getValue(name) {
-    return this.checkboxes[name].checked();
-  }
-}
-
-class DisplayManager {
-  constructor() {
-    this.displays = {};
-    this.values = {};
-    this.container = select('#displays');
-  }
-
-  addDisplay(name, value) {
-    let div = createDiv().parent(this.container);
-    let display = createSpan(name + ": " + value);
-    display.parent(div);
-    this.displays[name] = display;
-    this.values[name] = value;
-  }
-
-  getValue(name) {
-    return this.values[name];
-  }
-
-  setValue(name, value) {
-    return this.values[name] = value;
-  }
-
-  updateDisplays() {
-    for (const [key, value] of Object.entries(this.displays)) {
-      value.html("<strong>" + key + ":</strong><span style=\"float: right;\">" + this.values[key] + "</span>");
-    }
-  }
-}
-
 function setup() {
   canvasContainerWidth = select('#canvas-container').width;
   cellSize = canvasContainerWidth / gridSize;
@@ -105,8 +26,6 @@ function setup() {
   sliderManager.addSlider("Minimum plant count", 0, 10, 1, 1);
   sliderManager.addSlider("Mutation rate", 1, 100, 5, 100);
   checkboxManager = new CheckboxManager();
-  //checkboxManager.addCheckbox("Allow earth placement", false);
-  //checkboxManager.addCheckbox("Allow earth removal", false);
   checkboxManager.addCheckbox("Optimal behavior", false);
   displayManager = new DisplayManager();
   displayManager.addDisplay("Total steps", 0);
@@ -199,50 +118,11 @@ class Grid {
       this.cells[i] = [];
       for (let j = 0; j < this.cols; j++) {
         this.cells[i][j] = new Wall(i, j);
-        /*if (i === 0 || j === 0 || i === this.rows - 1 || j === this.cols - 1) {
-          this.cells[i][j] = new Wall(i, j);
-        } else {
-          this.cells[i][j] = null;
-        } else {
-          let centerDist = Math.sqrt(Math.pow(i - this.rows / 2, 2) + Math.pow(j - this.cols / 2, 2));
-          let centerFactor = centerDist / Math.sqrt(Math.pow(this.rows / 2, 2) + Math.pow(this.cols / 2, 2));
-          let p = Math.abs(0.5 - centerFactor);
-          p = 0; // Math.pow(p, 2);
-          if (random(1) < p) {
-            this.cells[i][j] = new Wall(i, j);
-          } else if (random(1) > 0.95) {
-            this.cells[i][j] = new Organism(i, j);
-          } else if (random(1) > 0.7) {
-            this.cells[i][j] = new Plant(i, j);
-          } else {
-            this.cells[i][j] = new Air(i, j);
-          }
-        }*/
       }
     }
     const centerX = 1 + 2 * Math.floor(gridSize/4);
     const centerY = centerX;
     this.cells[centerX][centerY] = null;
-    /*let frontiers = this.getFrontierCells(1, 1);
-    
-    const merge = (a, b, predicate = (a, b) => a === b) => {
-      const c = [...a];
-      b.forEach((bItem) => (c.some((cItem) => predicate(bItem, cItem)) ? null : c.push(bItem)))
-      return c;
-    }
-
-    for (let i = 0; i < 31; i++) {
-    //while (frontiers.length > 0) {
-      let frontierIndex = Math.floor(Math.random() * frontiers.length);
-      let frontier = frontiers[frontierIndex];
-      this.cells[frontier.x][frontier.y] = null;
-      let betweens = this.getBetweenCells(frontier.x, frontier.y);
-      let between = betweens[Math.floor(Math.random() * betweens.length)];
-      this.cells[between.x][between.y] = null;
-      frontiers = frontiers.splice(frontierIndex, 1);
-      frontiers = merge(frontiers, this.getFrontierCells(frontier.x, frontier.y));
-      console.log(frontiers);
-    }*/
     while (true) {
       let frontiers = [];
       for (let i = 1; i < this.rows - 1; i+=2) {
@@ -421,13 +301,6 @@ class Grid {
   }
 }
 
-function turnVector(vector, times) {
-  if (times > 0) {
-    return turnVector(createVector(vector.y, -vector.x), times - 1);
-  } else {
-    return vector;
-  }
-}
 
 class CellEntity {
   constructor(x, y) {
@@ -503,7 +376,6 @@ class Organism extends CellEntity {
     for (const direction of directions) {
       vision.push(this.directionalMinotaurSmell(grid, direction));
     }
-    //vision.push(this.energy / 1200);
     vision.push(Math.random());
     if (checkboxManager.getValue("Optimal behavior")) {
       this.decisions = [0, 0, 0, 0];
@@ -549,20 +421,6 @@ class Organism extends CellEntity {
       this.headstart = 0;
     }
     this.moveOffset = createVector(0, 0);
-    // Earth placement
-    /*let targetX = this.x + this.heading.x;
-    let targetY = this.y + this.heading.y;
-    if (this.decisions[3] > 0.5 && checkboxManager.getValue('Allow earth placement')) {
-      if (grid.cells[targetX][targetY] instanceof Air) {
-        grid.cells[targetX][targetY] = new Earth(targetX, targetY);
-        this.energy -= 3;
-      }
-    } else if (this.decisions[4] > 0.5 && checkboxManager.getValue('Allow earth removal')) {
-      if (grid.cells[targetX][targetY] instanceof Earth) {
-        grid.cells[targetX][targetY] = new Air(targetX, targetY);
-        this.energy -= 3;
-      }
-    }*/
     // Turn
     let maxIndex = 0;
     for (let i = 1; i <= 3; i++) {
@@ -579,7 +437,6 @@ class Organism extends CellEntity {
     if (this.decisions[maxIndex] > 0.5) {
       newX += this.heading.x;
       newY += this.heading.y;
-      // this.energy -= speed;
     }
     if (newX >= 0 && newX < grid.rows && newY >= 0 && newY < grid.cols) {
       if (grid.cells[newX][newY] instanceof Air) {
@@ -661,7 +518,7 @@ class Egg extends CellEntity {
 
   grow(grid) {
     this.age++;
-    if (this.age > 150) {
+    if (this.age > 100) {
       let organism = new Organism(this.x, this.y);
       organism.heading = this.heading;
       organism.brain = this.brain;
@@ -760,8 +617,6 @@ class Minotaur extends CellEntity {
     // Further actions
     let newX = this.x;
     let newY = this.y;
-    let oldX = this.x;
-    let oldY = this.y;
     if (this.decisions[maxIndex] > 0.5) {
       newX += this.heading.x;
       newY += this.heading.y;
@@ -816,12 +671,6 @@ class Minotaur extends CellEntity {
 class Wall extends CellEntity {
   getColor() {
     return [0, 0, 20];
-  }
-}
-
-class Earth extends CellEntity {
-  getColor() {
-    return [100, 80, 65];
   }
 }
 
